@@ -18,6 +18,7 @@
             display: flex;
             align-items: center;
             gap: 20px;
+            cursor: pointer;
 
             img {
                 height: 50px;
@@ -70,13 +71,6 @@
 
             &.own {
                 align-self: flex-end;
-
-                .texts {
-                    p {
-                        color: #5183fe;
-
-                    }
-                }
             }
             img {
                 width: 30px;
@@ -159,7 +153,7 @@
             color: white;
             padding: 10px 20px;
             border: none;
-            border-radius: 5px;
+            border-radius: 35px;
             cursor: pointer;
         }
     }

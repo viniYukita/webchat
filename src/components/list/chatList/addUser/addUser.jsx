@@ -1,76 +1,123 @@
-import "./addUser.css"
-import {db} from "../../../../lib/firebase"
-import { arrayUnion, collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
+import "./addUser.css";
+import { db } from "../../../../lib/firebase";
+import {
+  arrayUnion,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+} from "firebase/firestore";
 import { useState } from "react";
 import { useUserStore } from "../../../../lib/userStore";
 
 const AddUser = () => {
-    const [user, setUser] = useState(null)
-    const {currentUser} = useUserStore();
+  const [user, setUser] = useState(null);
 
-    const handleSearch = async e => {
-        e.preventDefault()
-        const formData = new FormData(e.target)
-        const username = formData.get("username")
+  const { currentUser } = useUserStore();
 
-        try {
-            const userRef = collection(db, "users");
-            const q = query(userRef, where("username", "==", username));
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const username = formData.get("username");
 
-            const querySnapShot = await getDocs(q)
+    try {
+      const userRef = collection(db, "users");
 
-            if (!querySnapShot.empty) {
-                setUser(querySnapShot.docs[0].data())
-            }
+      const q = query(userRef, where("username", "==", username));
 
-        } catch (error) {
-            console.log(error)
-        }
+      const querySnapShot = await getDocs(q);
+
+      if (!querySnapShot.empty) {
+        setUser(querySnapShot.docs[0].data());
+      }
+    } catch (err) {
+      console.log(err);
     }
+  };
 
-    const handleAdd = async () => {
+  const handleAdd = async () => {
+    const chatRef = collection(db, "chats");
+    const userChatsRef = collection(db, "userchats");
 
-        const chatRef = collection(db,"chats")
-        const userChatsRef = collection(db, "userchats")
+    try {
+      const newChatRef = doc(chatRef);
+      const newUserChatRef = doc(userChatsRef, currentUser.id);
+      const newUserIdChatRef = doc(userChatsRef, user.id);
+      const userChatDoc = await getDoc(newUserChatRef);
+      const userIdChatRefDoc = await getDoc(newUserIdChatRef);
 
-        try {
-            const newChatRef = doc(chatRef)
+      await setDoc(newChatRef, {
+        createdAt: serverTimestamp(),
+        messages: [],
+      });
 
-            await setDoc(newChatRef, {
-                createdAt: serverTimestamp(),
-                messages: []
-            });
+      if (userChatDoc.exists) {
+        await updateDoc(doc(userChatsRef, user.id), {
+          chats: arrayUnion({
+            chatId: newChatRef.id,
+            lastMessage: "",
+            receiverId: currentUser.id,
+            updatedAt: Date.now(),
+          })
+        });
+      } else {
+        await setDoc(newUserChatRef, {
+          chats: [{
+            chatId: newChatRef.id,
+            lastMessage: "",
+            receiverId: user.id,
+            updatedAt: Date.now(),
+          }],
+        });
+      }
 
-            await updateDoc(doc(userChatsRef,user.id), {
-                chats: arrayUnion({
-                    chatId: newChatRef.id,
-                    lastMessage: "",
-                    recieverId: currentUser.id,
-                    updatedAt: Date.now(),
-                })
-            })
-            
-        } catch (error) {
-            console.log(error)
-        }
+      if (userIdChatRefDoc.exists) {
+        await updateDoc(doc(userChatsRef, currentUser.id), {
+          chats: arrayUnion({
+            chatId: newChatRef.id,
+            lastMessage: "",
+            receiverId: user.id,
+            updatedAt: Date.now(),
+          })
+        });
+      } else {
+        await setDoc(newUserIdChatRef, {
+          chats: [{
+            chatId: newChatRef.id,
+            lastMessage: "",
+            receiverId: currentUser.id,
+            updatedAt: Date.now(),
+          }],
+        });
+      }
+
+    } catch (err) {
+      console.log(err);
     }
+  };
 
-    return (
-        <div className="addUser">
-            <form onSubmit={handleSearch}>
-                <input type="text" placeholder="Usuário" name="username" />
-                <button>Buscar</button>
-            </form>
-            {user && <div className="user">
-                <div className="detail">
-                    <img src={ user.avatar || "./avatar.png"} alt="" />
-                    <span>{user.username}</span>
-                </div>
-                <button onClick={handleAdd}>Conversar</button>
-            </div>}
-
+  return (
+    <div className="addUser">
+      <form onSubmit={handleSearch}>
+        <input type="text" placeholder="Username" name="username" />
+        <button>Search</button>
+      </form>
+      {user && (
+        <div className="user">
+          <div className="detail">
+            <img src={user.avatar || "./avatar.png"} alt="" />
+            <span>{user.username}</span>
+          </div>
+          <button onClick={handleAdd}>Conversar</button>
         </div>
-    )
-}
+      )}
+    </div>
+  );
+};
 
-export default AddUser
+export default AddUser;
