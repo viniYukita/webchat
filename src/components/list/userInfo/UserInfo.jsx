@@ -1,9 +1,18 @@
 import { useUserStore } from "../../../lib/userStore"
 import "./userInfo.css"
+import { AiOutlineTeam } from "react-icons/ai";
+import { useState } from "react";
+//import ChatList from "../chatList/ChatList";
+import AddGroup from "../chatList/addUser/addGroup";
 
 const UserInfo = () => {
 
     const {currentUser} = useUserStore();
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const toggleModal = () => {
+        setIsModalOpen(!isModalOpen);
+    }
 
     return (
         <div className="userInfo">
@@ -13,9 +22,18 @@ const UserInfo = () => {
             </div>
 
             <div className="icons">
-                
-                <img src="./more.png" alt="" />
+                <AiOutlineTeam onClick={toggleModal}/>
             </div>
+
+            {isModalOpen && (
+                <div className="modal">
+                    <div className="modal-content">
+                        <span className="close" onClick={toggleModal}>&times;</span>
+                        <AddGroup hideAddButton={true} />
+                    </div>
+                </div>
+            )}
+
         </div>
     )
 }
