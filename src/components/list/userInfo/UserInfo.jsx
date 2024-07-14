@@ -29,7 +29,7 @@ const UserInfo = () => {
                 <div className="modal">
                     <div className="modal-content">
                         <span className="close" onClick={toggleModal}>&times;</span>
-                        <AddGroup hideAddButton={true} />
+                        <AddGroup />
                     </div>
                 </div>
             )}

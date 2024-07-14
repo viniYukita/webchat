@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import "./addGroup.css";
 import { useUserStore } from "../../../../lib/userStore";
-import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, updateDoc, collection, setDoc, serverTimestamp, arrayUnion  } from "firebase/firestore";
 import { db } from "../../../../lib/firebase";
 import Select from 'react-select';
 
 const AddGroup = () => {
   const [chats, setChats] = useState([]);
-  const [input, setInput] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   
@@ -40,19 +39,20 @@ const AddGroup = () => {
   }, [currentUser.id]);
 
   useEffect(() => {
-    setSearchResults(
-      chats.filter((c) =>
-        c.user.username.toLowerCase().includes(input.toLowerCase())
-      )
-    );
-  }, [input, chats]);
+    setSearchResults(chats);
+  }, [chats]);
 
   const handleSelect = (selectedOptions) => {
-    setSelectedUsers(selectedOptions);
+    setSelectedUsers(selectedOptions || []);
   };
+  
+  const options = searchResults.map(chat => ({
+    value: chat?.user?.id,
+    label: chat?.user?.username
+  }));
 
   const customStyles = {
-    control: (provided, state) => ({
+    control: (provided) => ({
       ...provided,
       background: 'transparent',
       border: 'none',
@@ -61,34 +61,96 @@ const AddGroup = () => {
       flex: 1,
       width: '450px',
     }),
-    option: (provided, state) => ({
+    option: (provided) => ({
       ...provided,
       backgroundColor: 'transparent',
       color: 'white',
     }),
-    singleValue: (provided, state) => ({
+    multiValue: (provided) => ({
+      ...provided,
+      backgroundColor: 'rgba(17, 25, 40, 0.8)',
+      color: 'white',
+    }),
+    multiValueLabel: (provided) => ({
       ...provided,
       color: 'white',
     }),
-    menu: (provided, state) => ({
+    multiValueRemove: (provided) => ({
+      ...provided,
+      color: 'white',
+      ':hover': {
+        backgroundColor: 'red',
+        color: 'white',
+      },
+    }),
+    menu: (provided) => ({
       ...provided,
       backgroundColor: 'rgba(17, 25, 40, 0.8)',
       color: 'white',
     }),
   };
 
+  const handleAdd = async () => {
+    const chatRef = collection(db, "chats");
+    const userChatsRef = collection(db, "userchats");
+
+    try {
+      const newChatRef = doc(chatRef);
+      
+      await setDoc(newChatRef, {
+        createdAt: serverTimestamp(),
+        messages: [],
+      });
+
+      const addUserToChat = async (userId, chatId, receiverId) => {
+        const userChatRef = doc(userChatsRef, userId);
+        const userChatDoc = await getDoc(userChatRef);
+       
+        if (userChatDoc.exists()) {
+          await updateDoc(userChatRef, {
+            chats: arrayUnion({
+              chatId,
+              lastMessage: "",
+              receiverId,
+              updatedAt: Date.now(),
+            }),
+          });
+        } else {
+          await setDoc(userChatRef, {
+            chats: [
+              {
+                chatId,
+                lastMessage: "",
+                receiverId,
+                updatedAt: Date.now(),
+              },
+            ],
+          });
+        }
+      };
+  
+      // Adiciona o currentUser ao chat
+      await addUserToChat(currentUser.id, newChatRef.id, selectedUsers.map(user => user.value).join(", "));
+  
+      // Adiciona os usuários selecionados ao chat
+      for (const user of selectedUsers) {
+        await addUserToChat(user.value, newChatRef.id, currentUser.id);
+      }
+
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   return (
     <div className="addGroup">
       <p>Novo Grupo</p>
       <div className="select">     
-        <div className="selects">          
+        <div className="selects">
           <Select
             placeholder="Adicionar Membro" 
             isMulti 
-            options={searchResults.map(chat => ({
-              value: chat.user.userId,
-              label: chat.user.username,
-            }))}
+            options={options}
             styles={customStyles}
             onChange={handleSelect}
             value={selectedUsers}
@@ -96,7 +158,10 @@ const AddGroup = () => {
           />
         </div>
       </div>
+        <button onClick={handleAdd}>Criar Grupo</button>
     </div>
+    
+    
   );
 };
 
