@@ -74,10 +74,8 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
             userIDs.forEach(async (id) => {
                 const userChatsRef = doc(db, "userchats", id)
                 const userChatsSnapshot = await getDoc(userChatsRef)
-                console.log("Chegou!");
 
                 if (userChatsSnapshot.exists) {
-                    console.log("userChat existe");
                     const userChatsData = userChatsSnapshot.data()
                     const chatIndex = userChatsData.chats.findIndex(
                         c => c.chatId === chatId

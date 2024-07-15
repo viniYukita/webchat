@@ -1,0 +1,23 @@
+.dropDownMenuUser {
+    position: absolute;
+    top: 3.5rem;
+    right: 1.5rem;
+    left: 25%;
+    width: 120px;
+    padding: 15px;
+    border-radius: 15px;
+    background: linear-gradient(to bottom, #049b8c, #324c75);
+    border: 1px solid grey;
+}
+
+ul {
+    list-style-type: none;
+}
+
+li {
+    cursor: pointer;
+}
+
+.logout-btn {
+    margin-top: 1rem;
+}

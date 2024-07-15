@@ -1,10 +1,12 @@
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { useState } from 'react';
 
 const Cadastro = () => {
     const [avatar, setAvatar] = useState({
         file: null,
         url: ""
-    })
+    });
+
+    const [loading, setLoading] = useState(false)
 
     const handleCadastro = async (e) => {
         e.preventDefault();

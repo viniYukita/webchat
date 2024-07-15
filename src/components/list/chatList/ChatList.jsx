@@ -25,7 +25,7 @@ const ChatList = () => {
     const unSub = onSnapshot(
       doc(db, "userchats", currentUser.id),
       async (res) => {
-        const items = res.data().chats;
+        const items = res.data()?.chats;
 
         const promises = items.map(async (item) => {
           const userDocRef = doc(db, "users", item.receiverId);
@@ -104,15 +104,15 @@ const ChatList = () => {
         >
           <img
             src={
-              chat.user.avatar ? chat.user.avatar : "./avatar.png"
+              chat?.user?.avatar ? chat?.user?.avatar : "./avatar.png"
             }
             alt=""
           />
           <div className="texts">
             <span>
-              {chat.user.username ? chat.user.username : "User"}
+              {chat?.user?.username ? chat?.user?.username : "User"}
             </span>
-            <p>{chat.lastMessage}</p>
+            <p>{chat?.lastMessage}</p>
           </div>
         </div>
       ))}

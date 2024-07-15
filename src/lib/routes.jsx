@@ -8,7 +8,7 @@ const Routes = () => {
     return (
         <BrowserRouter>
             <Routes>
-                <Route component={Cadastro} path="/cadastro" />
+                <Route path="/cadastro" element={<Cadastro />} />
                 <Route component={Login} path="/login" />
             </Routes>
         </BrowserRouter>
