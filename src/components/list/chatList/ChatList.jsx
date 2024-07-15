@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "./chatList.css";
 import AddUser from "./addUser/addUser";
 import { useUserStore } from "../../../lib/userStore";
-import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, updateDoc, collection } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useChatStore } from "../../../lib/chatStore";
 
@@ -13,6 +13,8 @@ const ChatList = () => {
 
   const { currentUser } = useUserStore();
   const { chatId, changeChat } = useChatStore();
+
+  const [groups, setGroups] = useState([]);
 
   useEffect(() => {
 
@@ -42,8 +44,17 @@ const ChatList = () => {
       }
     );
 
+    const unSubGroups = onSnapshot(
+      collection(db, "groups"),
+      async (snapshot) => {
+        const groupsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setGroups(groupsData);
+      }
+    );
+
     return () => {
       unSub();
+      unSubGroups();
     };
   }, [currentUser.id]);
 
@@ -71,9 +82,27 @@ const ChatList = () => {
     }
   };
 
-  const filteredChats = !input ? chats : chats.filter((c) =>
-    c.user.username.toLowerCase().includes(input.toLowerCase())
-  );
+  const combinedList = [
+    ...chats.map(chat => ({
+      ...chat,
+      type: 'chat',
+    })),
+    ...groups.map(group => ({
+      ...group,
+      type: 'group',
+    })),
+  ];
+
+  const filteredCombinedList = !input
+    ? combinedList
+    : combinedList.filter((item) => {
+        if (item.type === 'chat') {
+          return item?.user?.username.toLowerCase().includes(input.toLowerCase());
+        } else if (item.type === 'group') {
+          return item.groupname.toLowerCase().includes(input.toLowerCase());
+        }
+        return false;
+      });
 
   return (
     <div className="chatList">
@@ -93,26 +122,28 @@ const ChatList = () => {
           onClick={() => setAddMode((prev) => !prev)}
         />
       </div>
-      {filteredChats.map((chat) => (
+      {filteredCombinedList.map((item) => (
         <div
           className="item"
-          key={chat.chatId}
-          onClick={() => handleSelect(chat)}
+          key={item.id || item.chatId }
+          onClick={() => handleSelect(item)}
           style={{
-            backgroundColor: chat?.isSeen ? "transparent" : "#5183fe",
+            backgroundColor: item?.isSeen ? "transparent" : "#5183fe",
           }}
         >
           <img
             src={
-              chat?.user?.avatar ? chat.user.avatar : "./avatar.png"
+              item.type === 'chat'
+                ? (item?.user?.avatar ? item.user.avatar : "./avatar.png")
+                : item.avatar
             }
             alt=""
           />
           <div className="texts">
             <span>
-              {chat?.user?.username ? chat.user.username : "User"}
+              {item.type === 'chat' ? item?.user?.username : item?.groupname}
             </span>
-            <p>{chat.lastMessage}</p>
+            <p>{item.lastMessage}</p>
           </div>
         </div>
       ))}

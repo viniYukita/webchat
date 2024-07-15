@@ -49,9 +49,9 @@
     left: 0;
     right: 0;
     margin: auto;
-    width: 95%; /*  Defina o tamanho desejado para o modal */
-    max-width: 600px; /*  Defina um máximo de largura para o modal, se necessário */
-    height: 300px; /*  Defina um máximo de largura para o modal, se necessário */
+    width: 95%;
+    max-width: 600px;
+    height: 350px;
 }
 
 .close {

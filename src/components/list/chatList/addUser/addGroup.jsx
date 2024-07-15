@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import "./addGroup.css";
 import { useUserStore } from "../../../../lib/userStore";
-import { doc, getDoc, onSnapshot, updateDoc, collection, setDoc, serverTimestamp, arrayUnion  } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, updateDoc, collection, setDoc, serverTimestamp, arrayUnion, addDoc   } from "firebase/firestore";
 import { db } from "../../../../lib/firebase";
 import Select from 'react-select';
+import upload from "../../../../lib/upload";
+import { toast } from "react-toastify";
 
 const AddGroup = () => {
   const [chats, setChats] = useState([]);
@@ -90,77 +92,93 @@ const AddGroup = () => {
     }),
   };
 
-  const handleAdd = async () => {
-    const chatRef = collection(db, "chats");
-    const userChatsRef = collection(db, "userchats");
+  const [avatar, setAvatar] = useState({
+    file: null,
+    url: ""
+  })
 
-    try {
-      const newChatRef = doc(chatRef);
-      
-      await setDoc(newChatRef, {
-        createdAt: serverTimestamp(),
-        messages: [],
-      });
-
-      const addUserToChat = async (userId, chatId, receiverId) => {
-        const userChatRef = doc(userChatsRef, userId);
-        const userChatDoc = await getDoc(userChatRef);
-       
-        if (userChatDoc.exists()) {
-          await updateDoc(userChatRef, {
-            chats: arrayUnion({
-              chatId,
-              lastMessage: "",
-              receiverId,
-              updatedAt: Date.now(),
-            }),
-          });
-        } else {
-          await setDoc(userChatRef, {
-            chats: [
-              {
-                chatId,
-                lastMessage: "",
-                receiverId,
-                updatedAt: Date.now(),
-              },
-            ],
-          });
-        }
-      };
-  
-      // Adiciona o currentUser ao chat
-      await addUserToChat(currentUser.id, newChatRef.id, selectedUsers.map(user => user.value).join(", "));
-  
-      // Adiciona os usuários selecionados ao chat
-      for (const user of selectedUsers) {
-        await addUserToChat(user.value, newChatRef.id, currentUser.id);
-      }
-
-    } catch (err) {
-      console.log(err);
+  const handleAvatar = e => {
+    if (e.target.files[0]) {
+        setAvatar({
+            file: e.target.files[0],
+            url: URL.createObjectURL(e.target.files[0])
+        })
     }
-  };
+  }
+
+  const handleGroup = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target)
+    const { groupname, usersGroup } = Object.fromEntries(formData)
+    const imgUrl = await upload(avatar.file)
+
+    console.log('groupname', groupname, 'usersGroup', usersGroup, 'imgUrl', imgUrl);
+
+    try {      
+    /* await setDoc(doc(db, "groups", currentUser.id),{
+        groupname,
+        usersGroup: JSON.parse(usersGroup),
+        avatar: imgUrl,
+        admin: currentUser.id
+      });*/
+
+      await addDoc(collection(db, "groups"), {
+        groupname,
+        usersGroup: JSON.parse(usersGroup),
+        avatar: imgUrl,
+        admin: currentUser.id
+    });
+
+      toast.success('Grupo criado com sucesso!')
+    } catch (error) {
+      console.log(error.message)
+      toast.error(error.message)
+    }
+  }
 
   return (
     <div className="addGroup">
       <p>Novo Grupo</p>
-      <div className="select">     
-        <div className="selects">
-          <Select
-            placeholder="Adicionar Membro" 
-            isMulti 
-            options={options}
-            styles={customStyles}
-            onChange={handleSelect}
-            value={selectedUsers}
-            closeMenuOnSelect={false}
-          />
+      <form onSubmit={handleGroup}>
+        <label htmlFor="file">
+            <img src={avatar.url || "./avatar.png"} alt="" />
+            <p>Inserir imagem</p>
+        </label>
+        <input type="file" id="file" style={{ display: "none" }} onChange={handleAvatar} />
+
+        <div className="select">
+          <div className="selects">
+            <input
+              placeholder="Nome Grupo.."
+              type="text"
+              name="groupname"
+            >
+            </input>  
+          </div>
         </div>
-      </div>
-        <button onClick={handleAdd}>Criar Grupo</button>
+        
+        <div className="select">
+          <div className="selects">
+            <Select
+              placeholder="Adicionar Membro" 
+              isMulti 
+              options={options}
+              styles={customStyles}
+              onChange={handleSelect}
+              value={selectedUsers}
+              name="usersGroup"
+              closeMenuOnSelect={false}
+            />
+            <input
+              type="hidden"
+              name="usersGroup"
+              value={JSON.stringify(selectedUsers.map(user => user.value))}
+            />
+          </div>
+        </div>
+        <button>Criar Grupo</button>
+      </form>
     </div>
-    
     
   );
 };
