@@ -20,17 +20,19 @@ const AddUser = () => {
 
   const { currentUser } = useUserStore();
 
-  const handleSearch = async (e) => {
+ /* const handleSearch = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const username = formData.get("username");
 
     try {
       const userRef = collection(db, "users");
+      const groupRef = collection(db, "groups");
 
       const q = query(userRef, where("username", "==", username));
+      const g = query(groupRef, where("groupname", "==", username));
 
-      const querySnapShot = await getDocs(q);
+      const querySnapShot = await getDocs(q,g);
 
       if (!querySnapShot.empty) {
         setUser(querySnapShot.docs[0].data());
@@ -38,7 +40,44 @@ const AddUser = () => {
     } catch (err) {
       console.log(err);
     }
-  };
+  };*/
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const username = formData.get("username");
+
+    try {
+        const userRef = collection(db, "users");
+        const groupRef = collection(db, "groups");
+
+        // Consulta para usuários com o nome de usuário correspondente
+        const userQuery = query(userRef, where("username", "==", username));
+        const userQuerySnapshot = await getDocs(userQuery);
+
+        // Consulta para grupos com o nome correspondente
+        const groupQuery = query(groupRef, where("groupname", "==", username));
+        const groupQuerySnapshot = await getDocs(groupQuery);
+
+        // Verifica se há resultados na consulta de usuários
+        if (!userQuerySnapshot.empty) {
+            const userData = userQuerySnapshot.docs[0].data();
+            setUser(userData);
+            // Aqui você pode definir um indicador ou lidar com os dados de usuário encontrados
+        } else if (!groupQuerySnapshot.empty) {
+            const groupData = groupQuerySnapshot.docs[0].data();
+            setUser(groupData);
+            // Aqui você pode definir um indicador ou lidar com os dados do grupo encontrados
+        } else {
+            // Caso não encontre nenhum usuário nem grupo com o nome correspondente
+            console.log("Nenhum usuário ou grupo encontrado com o nome:", username);
+        }
+
+    } catch (err) {
+        console.error("Erro ao pesquisar usuário ou grupo:", err);
+    }
+};
+
 
   const handleAdd = async () => {
     const chatRef = collection(db, "chats");
@@ -100,7 +139,7 @@ const AddUser = () => {
       console.log(err);
     }
   };
-
+console.log('aaaaaaaaaa', user);
   return (
     <div className="addUser">
       <form onSubmit={handleSearch}>
@@ -111,7 +150,7 @@ const AddUser = () => {
         <div className="user">
           <div className="detail">
             <img src={user.avatar || "./avatar.png"} alt="" />
-            <span>{user.username}</span>
+            <span>{user.username || user.groupname}</span>
           </div>
           <button onClick={handleAdd}>Conversar</button>
         </div>

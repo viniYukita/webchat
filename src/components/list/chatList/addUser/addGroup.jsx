@@ -112,22 +112,17 @@ const AddGroup = () => {
     const { groupname, usersGroup } = Object.fromEntries(formData)
     const imgUrl = await upload(avatar.file)
 
-    console.log('groupname', groupname, 'usersGroup', usersGroup, 'imgUrl', imgUrl);
-
-    try {      
-    /* await setDoc(doc(db, "groups", currentUser.id),{
+    try {
+      const rest = await addDoc(collection(db, "groups"), {
         groupname,
         usersGroup: JSON.parse(usersGroup),
         avatar: imgUrl,
         admin: currentUser.id
-      });*/
+      });
 
-      await addDoc(collection(db, "groups"), {
-        groupname,
-        usersGroup: JSON.parse(usersGroup),
-        avatar: imgUrl,
-        admin: currentUser.id
-    });
+      await setDoc(doc(db, "userchats", rest.id), {
+        chats: []
+      });
 
       toast.success('Grupo criado com sucesso!')
     } catch (error) {
