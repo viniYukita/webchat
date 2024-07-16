@@ -113,16 +113,16 @@ const AddGroup = () => {
     const imgUrl = await upload(avatar.file)
 
     try {
-      const rest = await addDoc(collection(db, "groups"), {
+      const groupDocRef = await addDoc(collection(db, "groups"), {
         groupname,
         usersGroup: JSON.parse(usersGroup),
         avatar: imgUrl,
         admin: currentUser.id
       });
 
-      await setDoc(doc(db, "userchats", rest.id), {
-        chats: []
-      });
+      await setDoc(doc(db, "groups", groupDocRef.id), {
+        id: groupDocRef.id
+      }, { merge: true });
 
       toast.success('Grupo criado com sucesso!')
     } catch (error) {

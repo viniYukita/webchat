@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "./chatList.css";
 import AddUser from "./addUser/addUser";
 import { useUserStore } from "../../../lib/userStore";
-import { doc, getDoc, onSnapshot, updateDoc, collection } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, updateDoc, collection, setDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useChatStore } from "../../../lib/chatStore";
 
@@ -25,7 +25,7 @@ const ChatList = () => {
     }
 
     const unSub = onSnapshot(
-      doc(db, "userchats", currentUser.id),
+      doc(db, "userchats", currentUser?.id),
       async (res) => {
         const items = res.data().chats;
 
@@ -45,7 +45,7 @@ const ChatList = () => {
     );
 
     const unSubGroups = onSnapshot(
-      collection(db, "groups"),
+      collection(db, "groupchats"),
       async (snapshot) => {
         const groupsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setGroups(groupsData);
@@ -56,27 +56,64 @@ const ChatList = () => {
       unSub();
       unSubGroups();
     };
-  }, [currentUser.id]);
+  }, [currentUser?.id]);
 
   const handleSelect = async (chat) => {
-    const userChats = chats.map((item) => {
+    if (chat.type === "group") {
+      // Verifica se o grupo já possui um chatId
+      if (!chat.chatId) {
+          const chatRef = doc(collection(db, "chats"));
+          const chatId = chatRef.id;
+
+          // Cria o documento na coleção "chats"
+          await setDoc(chatRef, {
+              createdAt: new Date(),
+              isGroup: true,
+              messages: []
+          });
+
+          // Atualiza o documento na coleção "groupchats" com o chatId
+          const groupChatRef = doc(db, "groupchats", chat.id);
+          await updateDoc(groupChatRef, { chatId });
+
+          chat.chatId = chatId;
+      }
+
+      const grupo = chat.chats.map(x => ({
+          ...x,
+          avatar: chat.avatar
+      }));
+
+      changeChat(chat.chatId, currentUser?.id);
+    } else {
+      // Mantém a conversa individual na lista de chats
+      if (!chats.find(c => c.chatId === chat.chatId)) {
+          chats.push(chat);
+      }
+        
+      changeChat(chat.chatId, chat.user);
+    }
+
+    // Atualiza o estado de userChats mantendo todas as conversas visíveis
+    const updatedUserChats = chats.map((item) => {
       const { user, ...rest } = item;
       return rest;
     });
 
-    const chatIndex = userChats.findIndex(
+    const chatIndex = updatedUserChats.findIndex(
       (item) => item.chatId === chat.chatId
     );
 
-    userChats[chatIndex].isSeen = true;
+    if (!chat.groupname) {
+      updatedUserChats[chatIndex].isSeen = true;
+    }
 
-    const userChatsRef = doc(db, "userchats", currentUser.id);
+    const userChatsRef = doc(db, "userchats", currentUser?.id);
 
     try {
       await updateDoc(userChatsRef, {
-        chats: userChats,
+          chats: updatedUserChats,
       });
-      changeChat(chat.chatId, chat.user);
     } catch (err) {
       console.log(err);
     }

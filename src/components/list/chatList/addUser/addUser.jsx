@@ -49,64 +49,81 @@ const AddUser = () => {
 
   const handleAdd = async () => {
     const chatRef = collection(db, "chats");
-    const userChatsRef = collection(db, "userchats");
+    const userChatsRef = user?.groupname ? collection(db, "groupchats") : collection(db, "userchats");
 
     try {
       const newChatRef = doc(chatRef);
-      const newUserChatRef = doc(userChatsRef, currentUser.id);
-      const newUserIdChatRef = doc(userChatsRef, user.id);
+      const newUserChatRef = doc(userChatsRef, currentUser?.id);
+      const newUserIdChatRef = doc(userChatsRef, user?.id);
       const userChatDoc = await getDoc(newUserChatRef);
       const userIdChatRefDoc = await getDoc(newUserIdChatRef);
 
-      await setDoc(newChatRef, {
-        createdAt: serverTimestamp(),
-        messages: [],
-      });
+        if (user?.groupname) {
+          await setDoc(newChatRef, {
+            createdAt: serverTimestamp(),
+            messages: [],
+            isGroup: true,
+          });
 
-      if (userChatDoc.exists) {
-        await updateDoc(doc(userChatsRef, user.id), {
-          chats: arrayUnion({
-            chatId: newChatRef.id,
-            lastMessage: "",
-            receiverId: currentUser.id,
-            updatedAt: Date.now(),
-          })
-        });
-      } else {
-        await setDoc(newUserChatRef, {
-          chats: [{
-            chatId: newChatRef.id,
-            lastMessage: "",
-            receiverId: user.id,
-            updatedAt: Date.now(),
-          }],
-        });
-      }
+          await setDoc(doc(db, "groupchats", user.id), {
+              chats: [],
+              groupname: user.groupname,
+              avatar: user.avatar,
+              isSeen: true,
+              isGroup: true,
+          });
 
-      if (userIdChatRefDoc.exists) {
-        await updateDoc(doc(userChatsRef, currentUser.id), {
-          chats: arrayUnion({
-            chatId: newChatRef.id,
-            lastMessage: "",
-            receiverId: user.id,
-            updatedAt: Date.now(),
-          })
-        });
-      } else {
-        await setDoc(newUserIdChatRef, {
-          chats: [{
-            chatId: newChatRef.id,
-            lastMessage: "",
-            receiverId: currentUser.id,
-            updatedAt: Date.now(),
-          }],
-        });
-      }
+          return;
+        } else {
+            await setDoc(newChatRef, {
+                createdAt: serverTimestamp(),
+                messages: [],
+            });
 
+            if (userChatDoc.exists) {
+                await updateDoc(doc(userChatsRef, currentUser.id), {
+                    chats: arrayUnion({
+                        chatId: newChatRef.id,
+                        lastMessage: "",
+                        receiverId: user.id,
+                        updatedAt: Date.now(),
+                    })
+                });
+            } else {
+                await setDoc(newUserChatRef, {
+                    chats: [{
+                        chatId: newChatRef.id,
+                        lastMessage: "",
+                        receiverId: user.id,
+                        updatedAt: Date.now(),
+                    }],
+                });
+            }
+
+            if (userIdChatRefDoc.exists) {
+                await updateDoc(doc(userChatsRef, user.id), {
+                    chats: arrayUnion({
+                        chatId: newChatRef.id,
+                        lastMessage: "",
+                        receiverId: currentUser.id,
+                        updatedAt: Date.now(),
+                    })
+                });
+            } else {
+                await setDoc(newUserIdChatRef, {
+                    chats: [{
+                        chatId: newChatRef.id,
+                        lastMessage: "",
+                        receiverId: currentUser.id,
+                        updatedAt: Date.now(),
+                    }],
+                });
+            }
+        }
     } catch (err) {
-      console.log(err);
+        console.log(err);
     }
-  };
+};
 
   return (
     <div className="addUser">

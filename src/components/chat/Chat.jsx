@@ -51,58 +51,76 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
 
     const handleSend = async () => {
         if (text == "") return;
-
+    
         let imgUrl = null;
-
+    
         try {
-
-            if(img.file) {
+            if (img.file) {
                 imgUrl = await upload(img.file);
             }
-
-            await updateDoc(doc(db, "chats", chatId), {
-                messages: arrayUnion({
-                    senderId: currentUser.id,
-                    text,
-                    createdAt: new Date(),
-                    ...(imgUrl && {img: imgUrl}),
-                }),
+    
+            const chatRef = doc(db, "chats", chatId);
+            const chatData = {
+                senderId: currentUser.id,
+                text,
+                createdAt: new Date(),
+                ...(imgUrl && { img: imgUrl }),
+            };
+    
+            await updateDoc(chatRef, {
+                messages: arrayUnion(chatData),
             });
+    
+            if (isGroup) {
+                // Atualiza a coleção groupchats para mensagens de grupo
+                const groupChatRef = doc(db, "groupchats", chatId);
+                const groupChatSnapshot = await getDoc(groupChatRef);
+                const groupChatData = groupChatSnapshot.data();
+                const chatIndex = groupChatData.chats.findIndex(c => c.chatId === chatId);
+                
 
-            const userIDs = [currentUser.id, user.id];
-
-            userIDs.forEach(async (id) => {
-                const userChatsRef = doc(db, "userchats", id)
-                const userChatsSnapshot = await getDoc(userChatsRef)
-                console.log("Chegou!");
-
-                if (userChatsSnapshot.exists) {
-                    console.log("userChat existe");
-                    const userChatsData = userChatsSnapshot.data()
-                    const chatIndex = userChatsData.chats.findIndex(
-                        c => c.chatId === chatId
-                    );
-
-                    userChatsData.chats[chatIndex].lastMessage = text;
-                    userChatsData.chats[chatIndex].isSeen =
-                        id === currentUser.id ? true : false;
-                    userChatsData.chats[chatIndex].updatedAt = Date.now();
-
-                    await updateDoc(userChatsRef, {
-                        chats: userChatsData.chats,
-                    })
+                if (groupChatSnapshot.exists) {
+                    const groupChatData = groupChatSnapshot.data();
+                    const chatIndex = groupChatData.chats.findIndex(c => c.chatId === chatId);
+    
+                    groupChatData.chats[chatIndex].lastMessage = text;
+                    groupChatData.chats[chatIndex].isSeen = false;
+                    groupChatData.chats[chatIndex].updatedAt = Date.now();
+    
+                    await updateDoc(groupChatRef, {
+                        chats: groupChatData.chats,
+                    });
                 }
-            })
-
+            } else {
+                // Atualiza a coleção userchats para mensagens individuais
+                const userIDs = [currentUser.id, user.id];
+                userIDs.forEach(async (id) => {
+                    const userChatsRef = doc(db, "userchats", id);
+                    const userChatsSnapshot = await getDoc(userChatsRef);
+                    if (userChatsSnapshot.exists) {
+                        const userChatsData = userChatsSnapshot.data();
+                        const chatIndex = userChatsData.chats.findIndex(c => c.chatId === chatId);
+    
+                        userChatsData.chats[chatIndex].lastMessage = text;
+                        userChatsData.chats[chatIndex].isSeen =
+                            id === currentUser.id ? true : false;
+                        userChatsData.chats[chatIndex].updatedAt = Date.now();
+    
+                        await updateDoc(userChatsRef, {
+                            chats: userChatsData.chats,
+                        });
+                    }
+                });
+            }
         } catch (error) {
-            console.log(error)
+            console.log(error);
         }
-
+    
         setImg({
             file: null,
             url: "",
         });
-
+    
         setText("");
     }
 
