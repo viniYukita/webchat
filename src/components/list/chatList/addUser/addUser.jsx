@@ -63,15 +63,81 @@ const AddUser = () => {
             createdAt: serverTimestamp(),
             messages: [],
             isGroup: true,
+            groupId: user.id
           });
 
-          await setDoc(doc(db, "groupchats", user.id), {
-              chats: [],
+         /* Aqui ele cria o chat e o groupchats e atualiza eles
+         
+          if (userChatDoc.exists) {
+            await updateDoc(doc(db, "groupchats", currentUser.id), {
+                chats: arrayUnion({
+                    chatId: newChatRef.id,
+                    lastMessage: "",
+                    receiverId: user.id,
+                    updatedAt: Date.now(),
+                }),
+                groupname: user.groupname,
+                avatar: user.avatar,
+                isSeen: true,
+                isGroup: true,
+            });
+          } else {
+              await setDoc(doc(db, "groupchats", user.id), {              
+                chats: [{
+                  chatId: newChatRef.id,
+                  lastMessage: "",
+                  receiverId: user.id,
+                  updatedAt: Date.now(),
+                }],
+                groupname: user.groupname,
+                avatar: user.avatar,
+                isSeen: true,
+                isGroup: true,
+            });
+          }
+
+          if (userIdChatRefDoc.exists) {
+              await updateDoc(doc(db, "groupchats", user.id), {
+                  chats: arrayUnion({
+                      chatId: newChatRef.id,
+                      lastMessage: "",
+                      receiverId: currentUser.id,
+                      updatedAt: Date.now(),
+                  }),
+                  groupname: user.groupname,
+                  avatar: user.avatar,
+                  isSeen: true,
+                  isGroup: true,
+              });
+          } else {
+            await setDoc(doc(db, "groupchats", user.id), {              
+              chats: [{
+                chatId: newChatRef.id,
+                lastMessage: "",
+                receiverId: user.id,
+                updatedAt: Date.now(),
+              }],
               groupname: user.groupname,
               avatar: user.avatar,
               isSeen: true,
               isGroup: true,
-          });
+            });
+          } */
+
+          //TO DO
+          //   essa parte deve criar array chats no groupchats
+         await setDoc(doc(db, "groupchats", user.id), {             
+            chats: [{
+              chatId: newChatRef.id,
+              lastMessage: "",
+              receiverId: user.id,
+              updatedAt: Date.now(),
+            }],
+            groupname: user.groupname,
+            avatar: user.avatar,
+            isSeen: true,
+            isGroup: true,
+          }); 
 
           return;
         } else {

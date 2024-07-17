@@ -70,21 +70,23 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
             await updateDoc(chatRef, {
                 messages: arrayUnion(chatData),
             });
+
     
-            if (isGroup) {
+            if (chat.isGroup) {
+                // TO DO
+                // esta parte do codigo atualiza a ultima mensagem na lista fdo grupo 
+                // LIMPAR CHACHE QUANDO CRIA CONVERSA COM USUARIO
+                //
                 // Atualiza a coleção groupchats para mensagens de grupo
-                const groupChatRef = doc(db, "groupchats", chatId);
-                const groupChatSnapshot = await getDoc(groupChatRef);
-                const groupChatData = groupChatSnapshot.data();
-                const chatIndex = groupChatData.chats.findIndex(c => c.chatId === chatId);
-                
+                const groupChatRef = doc(db, "groupchats", chat.groupId);
+                const groupChatSnapshot = await getDoc(groupChatRef);                
 
                 if (groupChatSnapshot.exists) {
                     const groupChatData = groupChatSnapshot.data();
-                    const chatIndex = groupChatData.chats.findIndex(c => c.chatId === chatId);
+                    const chatIndex = groupChatData.chats.findIndex(c => c.chatId === chatId);   
     
                     groupChatData.chats[chatIndex].lastMessage = text;
-                    groupChatData.chats[chatIndex].isSeen = false;
+                    groupChatData.chats[chatIndex].isSeen = user === currentUser.id ? true : false;
                     groupChatData.chats[chatIndex].updatedAt = Date.now();
     
                     await updateDoc(groupChatRef, {

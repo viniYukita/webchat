@@ -124,6 +124,13 @@ const AddGroup = () => {
         id: groupDocRef.id
       }, { merge: true });
 
+      // adicionado o groupchats para criar assim que insere um novo grupo porem, se crio ele ele ja lista no list, 
+      // deveria listar só se clicasse no conversa do userchat
+      //
+      /*await setDoc(doc(db, "groupchats", groupDocRef.id), {
+        chats: []
+      });*/
+
       toast.success('Grupo criado com sucesso!')
     } catch (error) {
       console.log(error.message)

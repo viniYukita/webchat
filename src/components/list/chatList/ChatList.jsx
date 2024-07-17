@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "./chatList.css";
 import AddUser from "./addUser/addUser";
 import { useUserStore } from "../../../lib/userStore";
-import { doc, getDoc, onSnapshot, updateDoc, collection, setDoc } from "firebase/firestore";
+import { doc, arrayUnion, getDoc, onSnapshot, updateDoc, collection, setDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useChatStore } from "../../../lib/chatStore";
 
@@ -45,7 +45,7 @@ const ChatList = () => {
     );
 
     const unSubGroups = onSnapshot(
-      collection(db, "groupchats"),
+      collection(db, "groups"),
       async (snapshot) => {
         const groupsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setGroups(groupsData);
@@ -69,20 +69,31 @@ const ChatList = () => {
           await setDoc(chatRef, {
               createdAt: new Date(),
               isGroup: true,
-              messages: []
+              messages: [],
+              groupId: chat.id,
+              chats: [{
+                chatId: chatId,
+                lastMessage: "",
+                receiverId: currentUser.id,
+                updatedAt: Date.now(),
+              }],
           });
 
           // Atualiza o documento na coleção "groupchats" com o chatId
-          const groupChatRef = doc(db, "groupchats", chat.id);
-          await updateDoc(groupChatRef, { chatId });
+          //const groupChatRef = doc(db, "groupchats", chat.id);
+          //await updateDoc(groupChatRef, { chatId });
+
+          await updateDoc(doc(db, "groupchats", chat.id), {
+            chats: arrayUnion({
+                chatId: chatId,
+                lastMessage: "",
+                receiverId: currentUser.id,
+                updatedAt: Date.now(),
+            })
+        });
 
           chat.chatId = chatId;
       }
-
-      const grupo = chat.chats.map(x => ({
-          ...x,
-          avatar: chat.avatar
-      }));
 
       changeChat(chat.chatId, currentUser?.id);
     } else {
@@ -130,6 +141,32 @@ const ChatList = () => {
     })),
   ];
 
+
+  // filtro novo mostrando grupo apenas pra quem faz parte do grupo aqui usa a colection groups no unSubGroups
+  const filteredCombinedList = !input
+  ? combinedList.filter((item) => {
+      if (item.type === 'group') {
+        const isUserInGroup = item.usersGroup?.includes(currentUser?.id);
+        const isAdmin = item.admin === currentUser?.id;
+
+        return isUserInGroup || isAdmin;
+      }
+      return true;
+    })
+  : combinedList.filter((item) => {
+      if (item.type === 'chat') {
+        return item?.user?.username.toLowerCase().includes(input.toLowerCase());
+      } else if (item.type === 'group') {
+        // Verifica se userGroup está definido
+        const isMemberOrAdmin = item.userGroup?.includes(currentUser?.id) || item.admin === currentUser?.id;
+        return isMemberOrAdmin && item.groupname.toLowerCase().includes(input.toLowerCase());
+      }
+      return false;
+    }); 
+
+
+  /*  Filtro antigo aqui usa a colection groupchats no unSubGroups
+  
   const filteredCombinedList = !input
     ? combinedList
     : combinedList.filter((item) => {
@@ -139,8 +176,11 @@ const ChatList = () => {
           return item.groupname.toLowerCase().includes(input.toLowerCase());
         }
         return false;
-      });
+      }); */
 
+      // TO DO
+      // LISTAR ULTIMA MENSAGEM DO GRUPO NO item.lastMessage
+      // AJUSTAR PARA NÃO EXIBIR GRUPOS QUE O USUARIO NÃO PARTICIPA
   return (
     <div className="chatList">
       <div className="search">
