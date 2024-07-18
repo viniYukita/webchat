@@ -63,7 +63,7 @@ const ChatList = () => {
       // Verifica se o grupo já possui um chatId
       if (!chat.chatId) {
           const chatRef = doc(collection(db, "chats"));
-          const chatId = chatRef.id;
+          const chatId = chat.id;
 
           // Cria o documento na coleção "chats"
           await setDoc(chatRef, {
@@ -78,10 +78,6 @@ const ChatList = () => {
                 updatedAt: Date.now(),
               }],
           });
-
-          // Atualiza o documento na coleção "groupchats" com o chatId
-          //const groupChatRef = doc(db, "groupchats", chat.id);
-          //await updateDoc(groupChatRef, { chatId });
 
           await updateDoc(doc(db, "groupchats", chat.id), {
             chats: arrayUnion({
@@ -104,7 +100,7 @@ const ChatList = () => {
         
       changeChat(chat.chatId, chat.user);
     }
-
+    
     // Atualiza o estado de userChats mantendo todas as conversas visíveis
     const updatedUserChats = chats.map((item) => {
       const { user, ...rest } = item;
@@ -117,16 +113,17 @@ const ChatList = () => {
 
     if (!chat.groupname) {
       updatedUserChats[chatIndex].isSeen = true;
-    }
+      const userChatsRef = doc(db, "userchats", currentUser?.id);
 
-    const userChatsRef = doc(db, "userchats", currentUser?.id);
-
-    try {
-      await updateDoc(userChatsRef, {
-          chats: updatedUserChats,
-      });
-    } catch (err) {
-      console.log(err);
+      try {
+        await updateDoc(userChatsRef, {
+            chats: updatedUserChats,
+        });
+      } catch (err) {
+        console.log(err);
+      }
+    } else {
+      // TO DO fazer para o grupo
     }
   };
 
@@ -141,15 +138,15 @@ const ChatList = () => {
     })),
   ];
 
-
-  // filtro novo mostrando grupo apenas pra quem faz parte do grupo aqui usa a colection groups no unSubGroups
   const filteredCombinedList = !input
   ? combinedList.filter((item) => {
       if (item.type === 'group') {
+
         const isUserInGroup = item.usersGroup?.includes(currentUser?.id);
         const isAdmin = item.admin === currentUser?.id;
+        const hasChat = item.hasChat;
 
-        return isUserInGroup || isAdmin;
+        return (isUserInGroup || isAdmin) && hasChat;
       }
       return true;
     })
@@ -158,29 +155,14 @@ const ChatList = () => {
         return item?.user?.username.toLowerCase().includes(input.toLowerCase());
       } else if (item.type === 'group') {
         // Verifica se userGroup está definido
-        const isMemberOrAdmin = item.userGroup?.includes(currentUser?.id) || item.admin === currentUser?.id;
+        const isMemberOrAdmin = item.usersGroup?.includes(currentUser?.id) || item.admin === currentUser?.id;
         return isMemberOrAdmin && item.groupname.toLowerCase().includes(input.toLowerCase());
       }
       return false;
-    }); 
+    });
 
-
-  /*  Filtro antigo aqui usa a colection groupchats no unSubGroups
-  
-  const filteredCombinedList = !input
-    ? combinedList
-    : combinedList.filter((item) => {
-        if (item.type === 'chat') {
-          return item?.user?.username.toLowerCase().includes(input.toLowerCase());
-        } else if (item.type === 'group') {
-          return item.groupname.toLowerCase().includes(input.toLowerCase());
-        }
-        return false;
-      }); */
-
-      // TO DO
-      // LISTAR ULTIMA MENSAGEM DO GRUPO NO item.lastMessage
-      // AJUSTAR PARA NÃO EXIBIR GRUPOS QUE O USUARIO NÃO PARTICIPA
+  // TO DO
+  // LISTAR ULTIMA MENSAGEM DO GRUPO NO item.lastMessage
   return (
     <div className="chatList">
       <div className="search">

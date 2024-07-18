@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import "./chat.css"
 import EmojiPicker from "emoji-picker-react"
-import { arrayUnion, doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
+import { arrayUnion, doc, getDoc, onSnapshot, updateDoc, collection } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useChatStore } from "../../lib/chatStore";
 import { useUserStore } from "../../lib/userStore";
@@ -17,6 +17,10 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
         url: ""
     });
 
+    const [avatar, setAvatar] = useState(null);
+    const [groupname, setGroupName] = useState(null);
+    const [groups, setGroups] = useState([]);
+
     const { currentUser } = useUserStore();
     const { chatId, user } = useChatStore();
 
@@ -30,8 +34,28 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
         const unsub = onSnapshot(doc(db, "chats", chatId), (res) => {
             setChat(res.data())
         });
+
+        const unSubGroups = onSnapshot(
+            collection(db, "groups"),
+            async (snapshot) => {
+                const groupsData = snapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .filter(group => group.id === chatId);
+    
+                setGroups(groupsData)
+
+                if (groupsData.length > 0) {
+                    const avatar = groupsData[0].avatar;
+                    const groupname = groupsData[0].groupname;
+                    setAvatar(avatar);
+                    setGroupName(groupname);
+                }
+            }
+        );
+
         return () => {
             unsub();
+            unSubGroups();
         };
     }, [chatId]);
 
@@ -73,6 +97,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
 
     
             if (chat.isGroup) {
+                //return;
                 // TO DO
                 // esta parte do codigo atualiza a ultima mensagem na lista fdo grupo 
                 // LIMPAR CHACHE QUANDO CRIA CONVERSA COM USUARIO
@@ -136,13 +161,16 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
         }
     }
 
+    const avatarToShow = groupname ? (avatar || "./avatar.png") : (user.avatar || "./avatar.png");
+    const nameToShow = groupname ? groupname : user.username;
+
     return (
         <div className="chat">
             <div className="top">
                 <div className="user" onClick={handleDetail}>
-                    <img src={user.avatar ? user.avatar : "./avatar.png"} alt="" />
+                    <img src={avatarToShow} alt="" />
                     <div className="texts">
-                        <span>{user.username}</span>
+                        <span>{nameToShow}</span>
                     </div>
                 </div>
                 <div className="icons">
