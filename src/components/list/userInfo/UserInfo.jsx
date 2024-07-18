@@ -6,6 +6,7 @@ import Cadastro from "../../login/Cadastro";
 import DropDownMenuUserInfo from './DropdownMenuUserInfo'
 import { BrowserRouter } from "react-router-dom";
 import { AiOutlineTeam } from "react-icons/ai";
+import { CiMenuKebab } from "react-icons/ci";
 import AddGroup from "../chatList/addUser/addGroup";
 
 const UserInfo = () => {
@@ -26,8 +27,8 @@ const UserInfo = () => {
             </div>
 
             <div className="icons">
-                <AiOutlineTeam onClick={toggleModal}/>
-                <img src="./more.png" alt="" onClick={() => setShowDropdown((prev) => !prev)} />
+                <AiOutlineTeam className="icon" onClick={toggleModal}/>
+                <CiMenuKebab onClick={() => setShowDropdown((prev) => !prev)}/>
                 {showDropDown && <DropDownMenuUserInfo />}
             </div>
 

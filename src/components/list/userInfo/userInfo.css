@@ -22,6 +22,10 @@
         font-size: 1.5em;
         cursor: pointer;
     }
+
+    .icon {
+        margin-right: 10px;
+      }
 }
 
 .modal {
