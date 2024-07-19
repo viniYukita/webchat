@@ -18,6 +18,11 @@ li {
     cursor: pointer;
 }
 
+a {
+    text-decoration: none;
+    color: white;
+}
+
 .logout-btn {
     margin-top: 1rem;
 }

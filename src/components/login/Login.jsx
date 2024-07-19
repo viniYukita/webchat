@@ -84,23 +84,6 @@ const Login = () => {
                     <button disabled={loading}>{loading ? "Entrando" : "Entrar"}</button>
                 </form>
             </div>
-
-            <div className="separator"></div>
-
-            <div className="item">
-                <h2>Criar uma conta</h2>
-                <form onSubmit={handleCadastro}>
-                    <label htmlFor="file">
-                        <img src={avatar.url || "./avatar.png"} alt="" />
-                        Avatar
-                    </label>
-                    <input type="file" id="file" style={{display:"none"}} onChange={handleAvatar} />
-                    <input type="text" placeholder="Usuário" name="username" />
-                    <input type="text" placeholder="E-mail" name="email" />
-                    <input type="password" placeholder="Senha" name="senha" />
-                    <button disabled={loading}> {loading ? "Cadastrando" : "Cadastrar"} </button>
-                </form>
-            </div>
         </div>
     )
 }

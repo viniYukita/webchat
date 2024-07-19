@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react"
-import "./chat.css"
-import EmojiPicker from "emoji-picker-react"
+import { useEffect, useRef, useState } from "react";
+import "./chat.css";
+import EmojiPicker from "emoji-picker-react";
 import { arrayUnion, doc, getDoc, onSnapshot, updateDoc, collection } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useChatStore } from "../../lib/chatStore";
@@ -12,7 +12,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
     const [chat, setChat] = useState();
     const [open, setOpen] = useState(false);
     const [text, setText] = useState("");
-    const [img, setImg] = useState({
+    const [file, setFile] = useState({
         file: null,
         url: ""
     });
@@ -28,7 +28,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
 
     useEffect(() => {
         endRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, []);
+    }, [chat]);
 
     useEffect(() => {
         const unsub = onSnapshot(doc(db, "chats", chatId), (res) => {
@@ -41,14 +41,15 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                 const groupsData = snapshot.docs
                     .map(doc => ({ id: doc.id, ...doc.data() }))
                     .filter(group => group.id === chatId);
-    
-                setGroups(groupsData)
 
                 if (groupsData.length > 0) {
                     const avatar = groupsData[0].avatar;
                     const groupname = groupsData[0].groupname;
                     setAvatar(avatar);
                     setGroupName(groupname);
+                } else {
+                    setAvatar(null);
+                    setGroupName(null);
                 }
             }
         );
@@ -61,48 +62,41 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
 
     const handleEmoji = e => {
         setText(prev => prev + e.emoji);
-        setOpen(false)
-    }
+        setOpen(false);
+    };
 
-    const handleImage = e => {
+    const handleFile = e => {
         if (e.target.files[0]) {
-            setImg({
+            setFile({
                 file: e.target.files[0],
                 url: URL.createObjectURL(e.target.files[0])
-            })
+            });
         }
-    }
+    };
 
     const handleSend = async () => {
-        if (text == "") return;
-    
-        let imgUrl = null;
-    
+        if (text === "" && !file.file) return;
+
+        let fileUrl = null;
+
         try {
-            if (img.file) {
-                imgUrl = await upload(img.file);
+            if (file.file) {
+                fileUrl = await upload(file.file);
             }
-    
+
             const chatRef = doc(db, "chats", chatId);
             const chatData = {
                 senderId: currentUser.id,
                 text,
                 createdAt: new Date(),
-                ...(imgUrl && { img: imgUrl }),
+                ...(fileUrl && { file: fileUrl }),
             };
-    
+
             await updateDoc(chatRef, {
                 messages: arrayUnion(chatData),
             });
 
-    
             if (chat.isGroup) {
-                //return;
-                // TO DO
-                // esta parte do codigo atualiza a ultima mensagem na lista fdo grupo 
-                // LIMPAR CHACHE QUANDO CRIA CONVERSA COM USUARIO
-                //
-                // Atualiza a coleção groupchats para mensagens de grupo
                 const groupChatRef = doc(db, "groupchats", chat.groupId);
                 const groupChatSnapshot = await getDoc(groupChatRef);                
 
@@ -119,7 +113,6 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                     });
                 }
             } else {
-                // Atualiza a coleção userchats para mensagens individuais
                 const userIDs = [currentUser.id, user.id];
                 userIDs.forEach(async (id) => {
                     const userChatsRef = doc(db, "userchats", id);
@@ -142,24 +135,24 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
         } catch (error) {
             console.log(error);
         }
-    
-        setImg({
+
+        setFile({
             file: null,
             url: "",
         });
-    
+
         setText("");
-    }
+    };
 
     const handleDetail = () => {
         onToggleDetail();
-    }
+    };
 
     const handleEnterKey = (event) => {
-        if (event.keyCode == 13) {
+        if (event.keyCode === 13) {
             handleSend();
         }
-    }
+    };
 
     const avatarToShow = groupname ? (avatar || "./avatar.png") : (user.avatar || "./avatar.png");
     const nameToShow = groupname ? groupname : user.username;
@@ -182,19 +175,18 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                 {chat?.messages?.map((message) => (
                     <div className={message.senderId === currentUser?.id ? "message own" : "message" } key={message?.createdAt}>
                         <div className="texts">
-                            {message.img && <img src={message.img} alt="" />}
+                            {message.file && <a href={message.file} target="_blank" rel="noopener noreferrer">Open file</a>}
                             <p>
                                 {message.text}
                             </p>
-                            
                         </div>
                     </div>
                 ))}
 
-                {img.url && (
+                {file.url && (
                 <div className="message own">
                     <div className="texts">
-                        <img src={img.url} alt="" />
+                        <a href={file.url} target="_blank" rel="noopener noreferrer">Open file</a>
                     </div>
                 </div>
                 )}
@@ -207,7 +199,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                         <img src="./img.png" alt="" />
                     </label>
 
-                    <input type="file" id="file" style={{display: "none"}} onChange={handleImage}/>
+                    <input type="file" id="file" style={{display: "none"}} onChange={handleFile}/>
                     <img src="./camera.png" alt="" />
                     <img src="./mic.png" alt="" />
                 </div>
@@ -221,10 +213,9 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                 <button className="sendBtn" onClick={handleSend} >Enviar</button>
             </div>
         </div>
-    )
+    );
 
     {isVisible && <Detail/>}
-    
 }
 
-export default Chat
+export default Chat;

@@ -2,7 +2,6 @@ import { useUserStore } from "../../../lib/userStore"
 import "./userInfo.css"
 import "../../detail/detail.css"
 import { useState } from "react";
-import Cadastro from "../../login/Cadastro";
 import DropDownMenuUserInfo from './DropdownMenuUserInfo'
 import { BrowserRouter } from "react-router-dom";
 import { AiOutlineTeam } from "react-icons/ai";
@@ -44,10 +43,6 @@ const UserInfo = () => {
         </div>
 
     )
-}
-
-function CadastroComponent() {
-    <Cadastro></Cadastro>
 }
 
 export default UserInfo
