@@ -27,6 +27,9 @@ const Detail = () => {
                     const groupname = groupsData[0].groupname;
                     setAvatar(avatar);
                     setGroupName(groupname);
+                } else {
+                    setAvatar(null);
+                    setGroupName(null);
                 }
             }
         );

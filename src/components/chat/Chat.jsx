@@ -41,14 +41,15 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                 const groupsData = snapshot.docs
                     .map(doc => ({ id: doc.id, ...doc.data() }))
                     .filter(group => group.id === chatId);
-    
-                setGroups(groupsData)
 
                 if (groupsData.length > 0) {
                     const avatar = groupsData[0].avatar;
                     const groupname = groupsData[0].groupname;
                     setAvatar(avatar);
                     setGroupName(groupname);
+                } else {
+                    setAvatar(null);
+                    setGroupName(null);
                 }
             }
         );
