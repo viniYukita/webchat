@@ -1,21 +1,20 @@
-import List from "./components/list/List"
-import Chat from "./components/chat/Chat"
-import Detail from "./components/detail/Detail"
-import Login from "./components/login/Login"
-import Notification from "./components/notification/Notification"
-import { useEffect, useState } from "react"
-import { onAuthStateChanged } from "firebase/auth"
-import { auth } from "./lib/firebase"
-import { useUserStore } from "./lib/userStore"
-import { useChatStore } from "./lib/chatStore"
-import React from "react"
+import React, { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import List from "./components/list/List";
+import Chat from "./components/chat/Chat";
+import Detail from "./components/detail/Detail";
+import Login from "./components/login/Login";
+import Cadastro from "./components/login/Cadastro";
+import Notification from "./components/notification/Notification";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "./lib/firebase";
+import { useUserStore } from "./lib/userStore";
+import { useChatStore } from "./lib/chatStore";
 
 const App = () => {
-  const user = false
-
-  const {currentUser, isLoading, fetchUserInfo} = useUserStore();
+  const { currentUser, isLoading, fetchUserInfo } = useUserStore();
   const { chatId } = useChatStore();
-  const [ isVisible, setIsVisible ] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
   const toggleDetailVisibility = () => {
     setIsVisible(!isVisible);
@@ -24,30 +23,35 @@ const App = () => {
   useEffect(() => {
     const unSub = onAuthStateChanged(auth, (user) => {
       fetchUserInfo(user?.uid);
-    })
+    });
     return () => {
       unSub();
-    }
+    };
   }, [fetchUserInfo]);
 
-  if (isLoading) return <div className="loading">Carregando...</div>
+  if (isLoading) return <div className="loading">Carregando...</div>;
 
   return (
-    <div className='container'>
-      {currentUser ? (
-        <>
-          <List/>
-          {chatId && <Chat isDetailVisible={isVisible} onToggleDetail={toggleDetailVisibility} />}
-          { isVisible && <Detail/> }
-        </>
+    <Router>
+      <div className="container">
+        {currentUser ? (
+          <>
+            <Routes>
+              <Route path="/" element={<List />} />
+              <Route path="/cadastro" element={<Cadastro />} />
+              {/* Adicione outras rotas conforme necessário */}
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+            {chatId && <Chat isDetailVisible={isVisible} onToggleDetail={toggleDetailVisibility} />}
+            {isVisible && <Detail />}
+          </>
         ) : (
-        <Login/>
-      )}
+          <Login />
+        )}
+        <Notification />
+      </div>
+    </Router>
+  );
+};
 
-      <Notification/>
-      
-    </div>
-  )
-}
-
-export default App
+export default App;
