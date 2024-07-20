@@ -39,8 +39,6 @@ const App = () => {
             <Routes>
               <Route path="/" element={<List />} />
               <Route path="/cadastro" element={<Cadastro />} />
-              {/* Adicione outras rotas conforme necessário */}
-              <Route path="*" element={<Navigate to="/" />} />
             </Routes>
             {chatId && <Chat isDetailVisible={isVisible} onToggleDetail={toggleDetailVisibility} />}
             {isVisible && <Detail />}
