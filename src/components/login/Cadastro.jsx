@@ -4,7 +4,7 @@ import { createUserWithEmailAndPassword, updateEmail } from "firebase/auth";
 import { setDoc, doc, onSnapshot, collection, updateDoc } from "firebase/firestore";
 import { toast } from 'react-toastify';
 import { auth, db } from "../../lib/firebase";
-import { AiOutlineUserAdd } from "react-icons/ai";
+import { AiOutlineUserAdd, AiOutlineArrowLeft } from "react-icons/ai";
 import "./cadastro.css";
 import AddUsuario from '../list/usuarios/AddUsuario';
 
@@ -132,8 +132,11 @@ const Cadastro = () => {
     return (
         <div className="cadastro-div">
             <div className="usuarios-list">
-                <h2>Usuários cadastrados</h2>
-                <AiOutlineUserAdd className="icon" onClick={toggleModal}/>
+                <div className="usuarios-opcao">
+                    <AiOutlineArrowLeft className='icon' onClick={handleVoltar} values='Voltar' />
+                    <h2>Usuários cadastrados</h2>
+                    <AiOutlineUserAdd className="icon" onClick={toggleModal} />
+                </div>
                 {userList.map(user => (
                     <div key={user.id} className="item" onClick={() => handleUserClick(user)}>
                         <img src={user.avatar || "./avatar.png"} alt="Avatar" className="avatar" />
@@ -164,7 +167,7 @@ const Cadastro = () => {
                             <option value="supervisor">Supervisor</option>
                             <option value="operador">Operador</option>
                         </select>
-                        
+
                         {!selectedUser.isDeleted && <button disabled={loading || selectedUser?.isDeleted}>{loading ? "Processando..." : (selectedUser ? "Atualizar" : "Cadastrar")}</button>}
                         {!selectedUser.isDeleted && <button type="button" className="delete-button" onClick={handleDeleteUser}>Excluir</button>}
                     </form>

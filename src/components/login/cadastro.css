@@ -14,17 +14,21 @@
 
 .usuarios-list {
     height: 98%;
+
     h2 {
         margin-bottom: 20px;
     }
 
     .item {
         display: flex;
-        align-items: center; /* Alinha itens verticalmente ao centro */
-        gap: 15px; /* Espaço entre a imagem e o nome */
+        align-items: center;
+        /* Alinha itens verticalmente ao centro */
+        gap: 15px;
+        /* Espaço entre a imagem e o nome */
         cursor: pointer;
         padding: 4px;
-        margin-bottom: 15px; /* Espaço entre os itens */
+        margin-bottom: 15px;
+        /* Espaço entre os itens */
     }
 }
 
@@ -138,4 +142,10 @@
     font-size: 24px;
     display: flex;
     cursor: pointer;
+}
+
+.usuarios-opcao {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
 }
