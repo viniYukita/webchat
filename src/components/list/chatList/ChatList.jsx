@@ -76,6 +76,7 @@ const ChatList = () => {
                 lastMessage: "",
                 receiverId: currentUser.id,
                 updatedAt: Date.now(),
+                isSeen: false
               }],
           });
 
@@ -122,8 +123,19 @@ const ChatList = () => {
       } catch (err) {
         console.log(err);
       }
-    } else {
-      // TO DO fazer para o grupo
+    } else {      
+
+      // atualizar o isSeen aqui 
+      updatedUserChats[chatIndex].isSeen = true;
+      const groupChatsRef = doc(db, "groupchats", chat.chatId);
+
+      try {
+        await updateDoc(groupChatsRef, {
+            chats: updatedUserChats,
+        });
+      } catch (err) {
+        console.log(err);
+      }
     }
   };
 
