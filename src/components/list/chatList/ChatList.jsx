@@ -16,6 +16,8 @@ const ChatList = () => {
 
   const [groups, setGroups] = useState([]);
 
+  const [groupchats, setGroupChats] = useState([]);
+
   useEffect(() => {
 
     const handleEscapeKey = (event) => {
@@ -29,18 +31,21 @@ const ChatList = () => {
       async (res) => {
         const items = res.data()?.chats;
 
-        const promises = items.map(async (item) => {
-          const userDocRef = doc(db, "users", item.receiverId);
-          const userDocSnap = await getDoc(userDocRef);
+        if(items){ 
 
-          const user = userDocSnap.data();
+          const promises = items.map(async (item) => {
+            const userDocRef = doc(db, "users", item.receiverId);
+            const userDocSnap = await getDoc(userDocRef);
 
-          return { ...item, user };
-        });
+            const user = userDocSnap.data();
 
-        const chatData = await Promise.all(promises);
+            return { ...item, user };
+          });
 
-        setChats(chatData.sort((a, b) => b.updatedAt - a.updatedAt));
+          const chatData = await Promise.all(promises);
+
+          setChats(chatData.sort((a, b) => b.updatedAt - a.updatedAt));
+        }
       }
     );
 
@@ -52,43 +57,27 @@ const ChatList = () => {
       }
     );
 
+     const unnSubGroupChats = onSnapshot(
+       collection(db, "groupchats"),
+       async (snapshot) => {
+        const groupChatsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+         setGroupChats(groupChatsData);
+       }
+     );
+
     return () => {
       unSub();
       unSubGroups();
+      unnSubGroupChats();
     };
   }, [currentUser?.id]);
 
   const handleSelect = async (chat) => {
     if (chat.type === "group") {
+
       // Verifica se o grupo já possui um chatId
-      if (!chat.chatId) {
-          const chatRef = doc(collection(db, "chats"));
-          const chatId = chat.id;
-
-          // Cria o documento na coleção "chats"
-          await setDoc(chatRef, {
-              createdAt: new Date(),
-              isGroup: true,
-              messages: [],
-              groupId: chat.id,
-              chats: [{
-                chatId: chatId,
-                lastMessage: "",
-                receiverId: currentUser.id,
-                updatedAt: Date.now(),
-                isSeen: false
-              }],
-          });
-
-          await updateDoc(doc(db, "groupchats", chat.id), {
-            chats: arrayUnion({
-                chatId: chatId,
-                lastMessage: "",
-                receiverId: currentUser.id,
-                updatedAt: Date.now(),
-            })
-        });
-
+      if (!chat.chatId) {            
+          const chatId = chat.id;  
           chat.chatId = chatId;
       }
 
@@ -106,7 +95,7 @@ const ChatList = () => {
     const updatedUserChats = chats.map((item) => {
       const { user, ...rest } = item;
       return rest;
-    });
+    }); 
 
     const chatIndex = updatedUserChats.findIndex(
       (item) => item.chatId === chat.chatId
@@ -123,19 +112,50 @@ const ChatList = () => {
       } catch (err) {
         console.log(err);
       }
-    } else {      
+    } else {  
+      
+      const groupChatsRef = doc(db, "groupchats", chat.chatId); 
+       
+      const groupChatSnapshot = await getDoc(groupChatsRef);
 
-      // atualizar o isSeen aqui 
-      updatedUserChats[chatIndex].isSeen = true;
-      const groupChatsRef = doc(db, "groupchats", chat.chatId);
+      const groupChatData = groupChatSnapshot.data();  
+       
+      var maxIndex = -1;
+       
+      if (Array.isArray(groupChatData.chats) && groupChatData.chats.length > 0) {
+           maxIndex = groupChatData.chats.reduce((maxIndex, currentValue, currentIndex) => {             
+              return currentIndex > maxIndex ? currentIndex : maxIndex;
+        }, 0); 
+      } else {
+        //ainda não houve troca de mensagens no grupo
+        return;       
+      } 
 
-      try {
-        await updateDoc(groupChatsRef, {
-            chats: updatedUserChats,
-        });
-      } catch (err) {
-        console.log(err);
-      }
+      const chatIndex = groupChatData.chats[maxIndex];  
+
+      const hasUser = chatIndex.isSeenGroup.findIndex(
+        (item) => item === currentUser.id
+      );  
+
+      if(hasUser < 0){
+                
+        chatIndex.isSeenGroup.push(currentUser.id)  
+         
+        await updateDoc(doc(db, "groupchats", chat.chatId), {
+          chats: arrayUnion({
+              chatId: chatIndex.chatId,
+              isSeenGroup: chatIndex.isSeenGroup, 
+              lastMessage: chatIndex.lastMessage,
+              receiverId: chatIndex.receiverId,
+              updatedAt: Date.now(),
+      })
+      }, { merge: true });
+
+      return; 
+     }else{
+        // Se o usuario ja visualizou a mensagem retorna
+        return;
+     }  
     }
   };
 
@@ -145,10 +165,11 @@ const ChatList = () => {
       type: 'chat',
     })),
     ...groups.map(group => ({
-      ...group,
+      ...group, 
+      groupchats: groupchats.filter(x => x.id == group.id),
       type: 'group',
     })),
-  ];
+  ]; 
 
   const filteredCombinedList = !input
   ? combinedList.filter((item) => {
@@ -156,11 +177,33 @@ const ChatList = () => {
 
         const isUserInGroup = item.usersGroup?.includes(currentUser?.id);
         const isAdmin = item.admin === currentUser?.id;
-        const hasChat = item.hasChat;
+        const hasChat = item.hasChat;  
 
         return (isUserInGroup || isAdmin) && hasChat;
       }
       return true;
+    }).map((item) => {  
+
+      if (item.type === 'group') {
+        const groups = item.groupchats || {};
+        const chats = groups.map(x => x.chats) || [];
+    
+        var isSeen = false;
+        var lastMessage = "";
+        if (chats.length > 0 && chats[chats.length - 1].length > 0) {
+          const lastChat = chats[chats.length - 1][chats[chats.length - 1].length - 1];
+          isSeen = lastChat.isSeenGroup?.includes(currentUser?.id) ? true : false; 
+          lastMessage = lastChat.lastMessage;
+        }
+
+        return {
+          ...item,
+          isSeen,
+          lastMessage,
+        };
+      }
+
+      return item;
     })
   : combinedList.filter((item) => {
       if (item.type === 'chat') {
@@ -173,8 +216,6 @@ const ChatList = () => {
       return false;
     });
 
-  // TO DO
-  // LISTAR ULTIMA MENSAGEM DO GRUPO NO item.lastMessage
   return (
     <div className="chatList">
       <div className="search">
