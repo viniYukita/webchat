@@ -74,7 +74,8 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
         }
     };
 
-    const handleSend = async () => {
+    const handleSend = async () => { 
+
         if (text === "" && !file.file) return;
 
         let fileUrl = null;
@@ -94,24 +95,23 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
 
             await updateDoc(chatRef, {
                 messages: arrayUnion(chatData),
-            });
+            }); 
 
             if (chat.isGroup) {
-                const groupChatRef = doc(db, "groupchats", chat.groupId);
-                const groupChatSnapshot = await getDoc(groupChatRef);                
+                //quando um msg é enviada no grupo sempre cria um chat item
+                const chatRef = collection(db, "chats");
+                const newChatRef = doc(chatRef); 
+                
+                await updateDoc(doc(db, "groupchats", chat.id), {
+                    chats: arrayUnion({
+                    chatId: newChatRef.id,
+                    isSeenGroup: [ currentUser.id ], 
+                    lastMessage: text,
+                    receiverId: currentUser.id,
+                    updatedAt: Date.now(),
+                    })
+                });
 
-                if (groupChatSnapshot.exists) {
-                    const groupChatData = groupChatSnapshot.data();
-                    const chatIndex = groupChatData.chats.findIndex(c => c.chatId === chatId);   
-    
-                    groupChatData.chats[chatIndex].lastMessage = text;
-                    groupChatData.chats[chatIndex].isSeen = user === currentUser.id ? true : false;
-                    groupChatData.chats[chatIndex].updatedAt = Date.now();
-    
-                    await updateDoc(groupChatRef, {
-                        chats: groupChatData.chats,
-                    });
-                }
             } else {
                 const userIDs = [currentUser.id, user.id];
                 userIDs.forEach(async (id) => {
