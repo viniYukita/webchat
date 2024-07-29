@@ -128,11 +128,12 @@ const AddGroup = () => {
     const formData = new FormData(e.target);
     const { groupname, usersGroup } = Object.fromEntries(formData);
 
-    // Add currentUser.id to the list of group members
     const members = [...JSON.parse(usersGroup), currentUser.id];
     const imgUrl = await upload(avatar.file);
+    const chatRef = collection(db, "chats");
 
     try {
+      const newChatRef = doc(chatRef);
       const groupDocRef = await addDoc(collection(db, "groups"), {
         groupname,
         usersGroup: members,
@@ -142,11 +143,26 @@ const AddGroup = () => {
 
       await setDoc(doc(db, "groups", groupDocRef.id), {
         id: groupDocRef.id,
-        hasChat: false,
+        hasChat: true,
       }, { merge: true });
 
       await setDoc(doc(db, "groupchats", groupDocRef.id), {
         chats: [],
+      });
+
+      await setDoc(newChatRef, {
+        createdAt: serverTimestamp(),
+        messages: [],
+        isGroup: true,
+        groupId: groupDocRef.id,
+      });
+  
+      await setDoc(doc(db, "chats", groupDocRef.id), {
+        createdAt: serverTimestamp(),
+        messages: [],
+        isGroup: true,
+        groupId: groupDocRef.id,
+        id: groupDocRef.id,
       });
 
       toast.success('Grupo criado com sucesso!');

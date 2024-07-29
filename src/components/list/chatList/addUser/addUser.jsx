@@ -57,76 +57,56 @@ const AddUser = ({ closeModal }) => {
       const userChatDoc = await getDoc(newUserChatRef);
       const userIdChatRefDoc = await getDoc(newUserIdChatRef);
 
-      if (user?.groupname) {
-        await setDoc(newChatRef, {
-          createdAt: serverTimestamp(),
-          messages: [],
-          isGroup: true,
-          groupId: user.id,
-        });
+      await setDoc(newChatRef, {
+        createdAt: serverTimestamp(),
+        messages: [],
+      });
 
-        await setDoc(doc(db, "chats", user.id), {
-          createdAt: serverTimestamp(),
-          messages: [],
-          isGroup: true,
-          groupId: user.id,
-          id: user.id,
-        });
-
-        await updateDoc(doc(db, "groups", user.id), {
-          hasChat: true,
+      if (userChatDoc.exists()) {
+        await updateDoc(newUserChatRef, {
+          chats: arrayUnion({
+            chatId: newChatRef.id,
+            lastMessage: "",
+            receiverId: user.id,
+            updatedAt: Date.now(),
+          }),
         });
       } else {
-        await setDoc(newChatRef, {
-          createdAt: serverTimestamp(),
-          messages: [],
-        });
-
-        if (userChatDoc.exists()) {
-          await updateDoc(newUserChatRef, {
-            chats: arrayUnion({
+        await setDoc(newUserChatRef, {
+          chats: [
+            {
               chatId: newChatRef.id,
               lastMessage: "",
               receiverId: user.id,
               updatedAt: Date.now(),
-            }),
-          });
-        } else {
-          await setDoc(newUserChatRef, {
-            chats: [
-              {
-                chatId: newChatRef.id,
-                lastMessage: "",
-                receiverId: user.id,
-                updatedAt: Date.now(),
-              },
-            ],
-          });
-        }
+            },
+          ],
+        });
+      }
 
-        if (userIdChatRefDoc.exists()) {
-          await updateDoc(newUserIdChatRef, {
-            chats: arrayUnion({
+      if (userIdChatRefDoc.exists()) {
+        await updateDoc(newUserIdChatRef, {
+          chats: arrayUnion({
+            chatId: newChatRef.id,
+            lastMessage: "",
+            receiverId: currentUser.id,
+            updatedAt: Date.now(),
+          }),
+        });
+      } else {
+        await setDoc(newUserIdChatRef, {
+          chats: [
+            {
               chatId: newChatRef.id,
               lastMessage: "",
               receiverId: currentUser.id,
               updatedAt: Date.now(),
-            }),
-          });
-        } else {
-          await setDoc(newUserIdChatRef, {
-            chats: [
-              {
-                chatId: newChatRef.id,
-                lastMessage: "",
-                receiverId: currentUser.id,
-                updatedAt: Date.now(),
-              },
-            ],
-          });
-        }
+            },
+          ],
+        });
       }
-      closeModal(); // Fecha o modal após adicionar o usuário
+
+      closeModal();
     } catch (err) {
       console.log(err);
     }
