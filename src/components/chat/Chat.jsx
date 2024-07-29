@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./chat.css";
 import EmojiPicker from "emoji-picker-react";
-import { arrayUnion, doc, getDoc, onSnapshot, updateDoc, collection } from "firebase/firestore";
+import { arrayUnion, doc, getDoc, onSnapshot, updateDoc, setDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useChatStore } from "../../lib/chatStore";
 import { useUserStore } from "../../lib/userStore";
@@ -75,7 +75,6 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
     };
 
     const handleSend = async () => { 
-
         if (text === "" && !file.file) return;
 
         let fileUrl = null;
@@ -86,6 +85,17 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
             }
 
             const chatRef = doc(db, "chats", chatId);
+            const chatDoc = await getDoc(chatRef);
+
+            if (!chatDoc.exists()) {
+                await setDoc(chatRef, {
+                    messages: [],
+                    createdAt: serverTimestamp(),
+                    isGroup: chat?.isGroup || false, // Assumindo que `chat` já tem essa informação
+                    ...(chat?.isGroup && { groupId: chatId }), // Se for um grupo, adiciona o ID do grupo
+                });
+            }
+
             const chatData = {
                 senderId: currentUser.id,
                 text,
@@ -97,21 +107,18 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                 messages: arrayUnion(chatData),
             }); 
 
-            if (chat.isGroup) {
-                //quando um msg é enviada no grupo sempre cria um chat item
-                const chatRef = collection(db, "chats");
-                const newChatRef = doc(chatRef); 
+            if (chat?.isGroup) {
+                const newChatRef = doc(collection(db, "chats"));
                 
-                await updateDoc(doc(db, "groupchats", chat.id), {
+                await updateDoc(doc(db, "groupchats", chatId), {
                     chats: arrayUnion({
-                    chatId: newChatRef.id,
-                    isSeenGroup: [ currentUser.id ], 
-                    lastMessage: text,
-                    receiverId: currentUser.id,
-                    updatedAt: Date.now(),
+                        chatId: newChatRef.id,
+                        isSeenGroup: [currentUser.id], 
+                        lastMessage: text,
+                        receiverId: currentUser.id,
+                        updatedAt: Date.now(),
                     })
                 });
-
             } else {
                 const userIDs = [currentUser.id, user.id];
                 userIDs.forEach(async (id) => {
@@ -120,15 +127,16 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                     if (userChatsSnapshot.exists) {
                         const userChatsData = userChatsSnapshot.data();
                         const chatIndex = userChatsData.chats.findIndex(c => c.chatId === chatId);
-    
-                        userChatsData.chats[chatIndex].lastMessage = text;
-                        userChatsData.chats[chatIndex].isSeen =
-                            id === currentUser.id ? true : false;
-                        userChatsData.chats[chatIndex].updatedAt = Date.now();
-    
-                        await updateDoc(userChatsRef, {
-                            chats: userChatsData.chats,
-                        });
+
+                        if (chatIndex !== -1) {
+                            userChatsData.chats[chatIndex].lastMessage = text;
+                            userChatsData.chats[chatIndex].isSeen = (id === currentUser.id);
+                            userChatsData.chats[chatIndex].updatedAt = Date.now();
+
+                            await updateDoc(userChatsRef, {
+                                chats: userChatsData.chats,
+                            });
+                        }
                     }
                 });
             }

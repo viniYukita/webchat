@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./addGroup.css";
 import { useUserStore } from "../../../../lib/userStore";
-import { doc, getDoc, onSnapshot, updateDoc, collection, setDoc, serverTimestamp, arrayUnion, addDoc   } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, updateDoc, collection, setDoc, serverTimestamp, arrayUnion, addDoc, getDocs } from "firebase/firestore";
 import { db } from "../../../../lib/firebase";
 import Select from 'react-select';
 import upload from "../../../../lib/upload";
@@ -11,9 +11,11 @@ const AddGroup = () => {
   const [chats, setChats] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
-  
+  const [avatar, setAvatar] = useState({ file: null, url: "" });
+
   const { currentUser } = useUserStore();
 
+  // Fetch user chats
   useEffect(() => {
     const unSub = onSnapshot(
       doc(db, "userchats", currentUser.id),
@@ -40,17 +42,37 @@ const AddGroup = () => {
     };
   }, [currentUser.id]);
 
+  // Fetch all users and exclude current user
   useEffect(() => {
-    setSearchResults(chats);
-  }, [chats]);
+    const fetchUsers = async () => {
+      const usersRef = collection(db, "users");
+
+      try {
+        const querySnapshot = await getDocs(usersRef);
+        const usersList = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        // Exclude current user from search results
+        const filteredUsers = usersList.filter(user => user.id !== currentUser.id);
+
+        setSearchResults(filteredUsers);
+      } catch (error) {
+        console.error("Erro ao buscar usuários: ", error);
+      }
+    };
+
+    fetchUsers();
+  }, [currentUser.id]);
 
   const handleSelect = (selectedOptions) => {
     setSelectedUsers(selectedOptions || []);
   };
-  
-  const options = searchResults.map(chat => ({
-    value: chat?.user?.id,
-    label: chat?.user?.username
+
+  const options = searchResults.map((user) => ({
+    value: user.id,
+    label: user.username,
   }));
 
   const customStyles = {
@@ -92,57 +114,55 @@ const AddGroup = () => {
     }),
   };
 
-  const [avatar, setAvatar] = useState({
-    file: null,
-    url: ""
-  })
-
-  const handleAvatar = e => {
+  const handleAvatar = (e) => {
     if (e.target.files[0]) {
-        setAvatar({
-            file: e.target.files[0],
-            url: URL.createObjectURL(e.target.files[0])
-        })
+      setAvatar({
+        file: e.target.files[0],
+        url: URL.createObjectURL(e.target.files[0]),
+      });
     }
-  }
+  };
 
   const handleGroup = async (e) => {
     e.preventDefault();
-    const formData = new FormData(e.target)
-    const { groupname, usersGroup } = Object.fromEntries(formData)
-    const imgUrl = await upload(avatar.file)
+    const formData = new FormData(e.target);
+    const { groupname, usersGroup } = Object.fromEntries(formData);
+
+    // Add currentUser.id to the list of group members
+    const members = [...JSON.parse(usersGroup), currentUser.id];
+    const imgUrl = await upload(avatar.file);
 
     try {
       const groupDocRef = await addDoc(collection(db, "groups"), {
         groupname,
-        usersGroup: JSON.parse(usersGroup),
+        usersGroup: members,
         avatar: imgUrl,
-        admin: currentUser.id
+        admin: currentUser.id,
       });
 
       await setDoc(doc(db, "groups", groupDocRef.id), {
         id: groupDocRef.id,
-        hasChat: false
+        hasChat: false,
       }, { merge: true });
 
       await setDoc(doc(db, "groupchats", groupDocRef.id), {
-        chats: []
+        chats: [],
       });
 
-      toast.success('Grupo criado com sucesso!')
+      toast.success('Grupo criado com sucesso!');
     } catch (error) {
-      console.log(error.message)
-      toast.error(error.message)
+      console.log(error.message);
+      toast.error(error.message);
     }
-  }
+  };
 
   return (
     <div className="addGroup">
       <p>Novo Grupo</p>
       <form onSubmit={handleGroup}>
         <label htmlFor="file">
-            <img src={avatar.url || "./avatar.png"} alt="" />
-            <p>Inserir imagem</p>
+          <img src={avatar.url || "./avatar.png"} alt="" />
+          <p>Inserir imagem</p>
         </label>
         <input type="file" id="file" style={{ display: "none" }} onChange={handleAvatar} />
 
@@ -152,16 +172,15 @@ const AddGroup = () => {
               placeholder="Nome Grupo.."
               type="text"
               name="groupname"
-            >
-            </input>  
+            />
           </div>
         </div>
-        
+
         <div className="select">
           <div className="selects">
             <Select
-              placeholder="Adicionar Membro" 
-              isMulti 
+              placeholder="Adicionar Membro"
+              isMulti
               options={options}
               styles={customStyles}
               onChange={handleSelect}
@@ -179,7 +198,6 @@ const AddGroup = () => {
         <button>Criar Grupo</button>
       </form>
     </div>
-    
   );
 };
 
