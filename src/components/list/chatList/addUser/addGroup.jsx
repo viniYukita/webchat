@@ -7,7 +7,7 @@ import Select from 'react-select';
 import upload from "../../../../lib/upload";
 import { toast } from "react-toastify";
 
-const AddGroup = () => {
+const AddGroup = ({ closeModal }) => {
   const [chats, setChats] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -166,6 +166,7 @@ const AddGroup = () => {
       });
 
       toast.success('Grupo criado com sucesso!');
+      closeModal();
     } catch (error) {
       console.log(error.message);
       toast.error(error.message);

@@ -47,6 +47,8 @@ const AddUser = ({ closeModal }) => {
   };
 
   const handleAdd = async () => {
+    if (!user) return; // Certifique-se de que há um usuário ou grupo selecionado
+
     const chatRef = collection(db, "chats");
     const userChatsRef = user?.groupname ? collection(db, "groupchats") : collection(db, "userchats");
 
@@ -108,7 +110,7 @@ const AddUser = ({ closeModal }) => {
 
       closeModal();
     } catch (err) {
-      console.log(err);
+      console.log("Erro ao iniciar a conversa:", err);
     }
   };
 
@@ -116,7 +118,7 @@ const AddUser = ({ closeModal }) => {
     <div className="addUser">
       <form onSubmit={handleSearch}>
         <input type="text" placeholder="Username" name="username" />
-        <button>Search</button>
+        <button type="submit">Search</button>
       </form>
       {user && (
         <div className="user">
