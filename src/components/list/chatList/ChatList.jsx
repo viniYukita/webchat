@@ -47,7 +47,9 @@ const ChatList = () => {
     const fetchGroups = async () => {
       const groupsRef = collection(db, "groups");
       const snapshot = await getDocs(groupsRef);
-      const groupsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const groupsData = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((group) => group.usersGroup?.includes(currentUser?.id) || group.admin === currentUser?.id); // Filtra os grupos que o usuário faz parte
       setGroups(groupsData);
     };
 
