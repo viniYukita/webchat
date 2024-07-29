@@ -19,7 +19,7 @@ const ChatList = () => {
   useEffect(() => {
     const handleEscapeKey = (event) => {
       if (event.key === "Escape") {
-        setAddMode(false);
+        setAddMode(false); // Fecha o modal
       }
     };
 
@@ -62,12 +62,12 @@ const ChatList = () => {
       }
     );
 
-    document.addEventListener("keydown", handleEscapeKey);
+    document.addEventListener("keydown", handleEscapeKey); // Adiciona o listener para a tecla "Esc"
 
     return () => {
       unSubUserChats();
       unSubGroupChats();
-      document.removeEventListener("keydown", handleEscapeKey);
+      document.removeEventListener("keydown", handleEscapeKey); // Remove o listener ao desmontar o componente
     };
   }, [currentUser?.id]);
 
