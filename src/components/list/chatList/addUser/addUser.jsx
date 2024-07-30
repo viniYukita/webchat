@@ -15,9 +15,8 @@ import {
 import { useState } from "react";
 import { useUserStore } from "../../../../lib/userStore";
 
-const AddUser = () => {
+const AddUser = ({ closeModal }) => {
   const [user, setUser] = useState(null);
-
   const { currentUser } = useUserStore();
 
   const handleSearch = async (e) => {
@@ -36,18 +35,20 @@ const AddUser = () => {
       const groupQuerySnapshot = await getDocs(groupQuery);
 
       if (!userQuerySnapshot.empty) {
-          const userData = userQuerySnapshot.docs[0].data();
-          setUser(userData);
+        const userData = userQuerySnapshot.docs[0].data();
+        setUser(userData);
       } else if (!groupQuerySnapshot.empty) {
-          const groupData = groupQuerySnapshot.docs[0].data();
-          setUser(groupData);
+        const groupData = groupQuerySnapshot.docs[0].data();
+        setUser(groupData);
       }
     } catch (err) {
-        console.error("Erro ao pesquisar usuário ou grupo:", err);
+      console.error("Erro ao pesquisar usuário ou grupo:", err);
     }
   };
 
   const handleAdd = async () => {
+    if (!user) return; // Certifique-se de que há um usuário ou grupo selecionado
+
     const chatRef = collection(db, "chats");
     const userChatsRef = user?.groupname ? collection(db, "groupchats") : collection(db, "userchats");
 
@@ -58,81 +59,66 @@ const AddUser = () => {
       const userChatDoc = await getDoc(newUserChatRef);
       const userIdChatRefDoc = await getDoc(newUserIdChatRef);
 
-        if (user?.groupname) {
-          await setDoc(newChatRef, {
-            createdAt: serverTimestamp(),
-            messages: [],
-            isGroup: true,
-            groupId: user.id
-          });
+      await setDoc(newChatRef, {
+        createdAt: serverTimestamp(),
+        messages: [],
+      });
 
-          await setDoc(doc(db, "chats", user.id), {             
-            createdAt: serverTimestamp(),
-            messages: [],
-            isGroup: true,
-            groupId: user.id,
-            id: user.id
-          });
+      if (userChatDoc.exists()) {
+        await updateDoc(newUserChatRef, {
+          chats: arrayUnion({
+            chatId: newChatRef.id,
+            lastMessage: "",
+            receiverId: user.id,
+            updatedAt: Date.now(),
+          }),
+        });
+      } else {
+        await setDoc(newUserChatRef, {
+          chats: [
+            {
+              chatId: newChatRef.id,
+              lastMessage: "",
+              receiverId: user.id,
+              updatedAt: Date.now(),
+            },
+          ],
+        });
+      }
 
-          await updateDoc(doc(db, "groups", user.id), {
-            hasChat: true
-          })
-        } else {
-            await setDoc(newChatRef, {
-                createdAt: serverTimestamp(),
-                messages: [],
-            });
+      if (userIdChatRefDoc.exists()) {
+        await updateDoc(newUserIdChatRef, {
+          chats: arrayUnion({
+            chatId: newChatRef.id,
+            lastMessage: "",
+            receiverId: currentUser.id,
+            updatedAt: Date.now(),
+          }),
+        });
+      } else {
+        await setDoc(newUserIdChatRef, {
+          chats: [
+            {
+              chatId: newChatRef.id,
+              lastMessage: "",
+              receiverId: currentUser.id,
+              updatedAt: Date.now(),
+            },
+          ],
+        });
+      }
 
-            if (userChatDoc.exists) {
-                await updateDoc(doc(userChatsRef, currentUser.id), {
-                    chats: arrayUnion({
-                        chatId: newChatRef.id,
-                        lastMessage: "",
-                        receiverId: user.id,
-                        updatedAt: Date.now(),
-                    })
-                });
-            } else {
-                await setDoc(newUserChatRef, {
-                    chats: [{
-                        chatId: newChatRef.id,
-                        lastMessage: "",
-                        receiverId: user.id,
-                        updatedAt: Date.now(),
-                    }],
-                });
-            }
-
-            if (userIdChatRefDoc.exists) {
-                await updateDoc(doc(userChatsRef, user.id), {
-                    chats: arrayUnion({
-                        chatId: newChatRef.id,
-                        lastMessage: "",
-                        receiverId: currentUser.id,
-                        updatedAt: Date.now(),
-                    })
-                });
-            } else {
-                await setDoc(newUserIdChatRef, {
-                    chats: [{
-                        chatId: newChatRef.id,
-                        lastMessage: "",
-                        receiverId: currentUser.id,
-                        updatedAt: Date.now(),
-                    }],
-                });
-            }
-        }
+      closeModal();
     } catch (err) {
-        console.log(err);
+      console.log("Erro ao iniciar a conversa:", err);
     }
-};
+  };
 
   return (
     <div className="addUser">
       <form onSubmit={handleSearch}>
         <input type="text" placeholder="Username" name="username" />
-        <button>Search</button>
+        <button type="submit">Search</button>
       </form>
       {user && (
         <div className="user">
