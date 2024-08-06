@@ -5,6 +5,7 @@ import { setDoc, doc, onSnapshot, collection, updateDoc } from "firebase/firesto
 import { toast } from 'react-toastify';
 import { auth, db } from "../../lib/firebase";
 import { AiOutlineUserAdd, AiOutlineArrowLeft } from "react-icons/ai";
+import upload from "../../lib/upload";
 import "./cadastro.css";
 import AddUsuario from '../list/usuarios/AddUsuario';
 
@@ -157,7 +158,7 @@ const Cadastro = () => {
                             Avatar
                         </label>
                         <input type="file" id="file" style={{ display: "none" }} onChange={handleAvatar} disabled={selectedUser?.isDeleted} />
-                        <input type="text" placeholder="Usuário" name="username" defaultValue={selectedUser?.username || ""} readOnly={selectedUser?.isDeleted} />
+                        <input type="text" placeholder="Usuário" name="username" value={selectedUser?.username} defaultValue={selectedUser?.username || ""} readOnly={selectedUser?.isDeleted} />
                         <input type="text" placeholder="E-mail" name="email" defaultValue={selectedUser?.email || ""} readOnly={selectedUser?.isDeleted} />
                         <input type="password" placeholder="Senha" name="senha" disabled={selectedUser?.isDeleted} />
                         <select id="userRole" value={role} onChange={handleRoleChange} disabled={selectedUser?.isDeleted}>

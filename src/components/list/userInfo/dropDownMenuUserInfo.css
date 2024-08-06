@@ -1,4 +1,5 @@
 .dropDownMenuUser {
+    font-size:13px;
     position: absolute;
     top: 3.5rem;
     right: 1.5rem;
@@ -6,7 +7,7 @@
     width: 120px;
     padding: 15px;
     border-radius: 15px;
-    background: linear-gradient(to bottom, #049b8c, #324c75);
+    background: #062b40;
     border: 1px solid grey;
 }
 

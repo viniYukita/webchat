@@ -1,5 +1,5 @@
 .chat {
-    flex: 2;
+    flex: 3;
     border-left: 1px solid #dddddd35;
     border-right: 1px solid #dddddd35;
     display: flex;
@@ -13,6 +13,7 @@
         align-items: center;
         justify-content: space-between;
         border-bottom: 1px solid #dddddd35;
+        background: #062b40;
 
         .user {
             display: flex;
@@ -33,7 +34,7 @@
                 gap: 5px;
 
                 span {
-                    font-size: 18px;
+                    font-size: 14px;
                     font-weight: bold;
                 }
 
@@ -63,6 +64,7 @@
         overflow: scroll;
         flex-direction: column;
         gap: 20px;
+        background: #03131e;
 
         .message {
             max-width: 70%;
@@ -84,6 +86,7 @@
                 display: flex;
                 flex-direction: column;
                 gap: 5px;
+                font-size: 13px;
 
                 img {
                     width: 100%;
