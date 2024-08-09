@@ -1,76 +1,164 @@
 .chatList {
     flex: 1;
     overflow: auto;
+  }
+  
+  .chatList .search {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+  }
+  
+  .chatList .search .searchBar {
+    flex: 1;
+    background-color: rgba(17, 25, 40, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-radius: 10px;
+    padding: 10px;
+  }
+  
+  .chatList .search .searchBar input {
+    background-color: transparent;
+    border: none;
+    outline: none;
+    color: white;
+    flex: 1;
+  }
+  
+  .chatList .search .searchBar img {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .chatList .search .add {
+    width: 36px;
+    height: 36px;
+    background-color: rgba(17, 25, 40, 0.5);
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  
+  .chatList .item {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    cursor: pointer;
+    border-bottom: 1px solid #dddddd35;
+    position: relative; /* Adicionado para dropdown */
+  }
+  
+  .chatList .item img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  
+  .chatList .item .text {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .chatList .item .text span {
+    font-weight: 500;
+  }
+  
+  .chatList .item .text p {
+    font-size: 14px;
+  }
+  
+  .chatList .item .actions {
+    margin-left: auto;
+  }
+  
+  .chatList .item .dropdown {
+    position: relative;
+  }
+  
+  .chatList .item .dropdown button {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+  }
+  
+  .chatList .item .dropdown .dropdown-content {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background-color: rgb(86 106 146 / 50%);;
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    min-width: 160px;
+  }
+  
+  .chatList .item .dropdown .dropdown-content button {
+    width: 100%;
+    padding: 12px 16px;
+    text-align: left;
+    background-color: white;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .chatList .item .dropdown .dropdown-content button:hover {
+    background-color: #ddd;
+  }
 
-    .search {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-        padding: 20px;
-
-        .searchBar {
-            flex: 1;
-            background-color: rgba(17,25,40,0.5);
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            border-radius: 10px;
-            padding: 10px;
-
-            input {
-                background-color: transparent;
-                border: none;
-                outline: none;
-                color: white;
-                flex: 1;
-            }
-
-            img {
-                width: 20px;
-                height: 20px;
-            }
-        }
-
-        .add {
-            width: 36px;
-            height: 36px;
-            background-color: rgba(17,25,40,0.5);
-            padding: 10px;
-            border-radius: 10px;
-            cursor: pointer;
-        }
-
-    }
-
-    .item {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-        padding: 20px;
-        cursor: pointer;
-        border-bottom: 1px solid #dddddd35;
-
-        img {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-
-        .text {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-
-            span {
-                font-weight: 500;
-            }
-
-            p {
-                font-size: 14px;
-            }
-        }
-
-    }
-    
+  /* Estilos para o dropdown */
+  .dropdown {
+    position: absolute;
+    right: 10px; /* Ajuste a distância do botão em relação ao lado direito da mensagem */
+    top: 50%; /* Alinha verticalmente no meio da mensagem */
+    transform: translateY(-50%); /* Corrige o alinhamento vertical */
+    display: inline-block;
+    background: transparent;
+    border: none;
+    cursor: pointer;
 }
+
+.dropdown button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px; /* Ajuste o tamanho do ícone conforme necessário */
+    color: white; /* Ajuste a cor do ícone conforme necessário */
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0; /* Alinha o menu ao lado direito do botão */
+    top: 100%; /* Coloca o menu logo abaixo do botão */
+    background-color: white;
+    border: 1px solid #ddd;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+}
+
+.dropdown-content.show {
+    display: block;
+    border-radius: 6px;
+    background-color: rgb(86 106 146 / 50%);
+    margin-top: -2rem;
+}
+
+.dropdown-content button {
+    background: none;
+    border: none;
+    padding: 8px 16px;
+    cursor: pointer;
+    display: block;
+    width: 100%; /* Faz o botão ocupar toda a largura do dropdown */
+}
+
+.dropdown-content button:hover {
+    background-color: #f1f1f1;
+}
+  

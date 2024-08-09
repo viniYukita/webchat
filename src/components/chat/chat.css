@@ -4,7 +4,6 @@
     border-right: 1px solid #dddddd35;
     display: flex;
     flex-direction: column;
-
     height: 100%;
 
     .top {
@@ -67,13 +66,15 @@
         background: #03131e;
 
         .message {
-            max-width: 70%;
+            max-width: 100%;
             display: flex;
             gap: 20px;
+            position: relative; /* Adicionado para o posicionamento absoluto do dropdown */
 
             &.own {
                 align-self: flex-end;
             }
+
             img {
                 width: 30px;
                 height: 30px;
@@ -87,6 +88,7 @@
                 flex-direction: column;
                 gap: 5px;
                 font-size: 13px;
+                position: relative;
 
                 img {
                     width: 100%;
@@ -94,20 +96,71 @@
                     border-radius: 10px;
                     object-fit: cover;
                 }
-
             }
 
             p {
                 padding: 20px;
                 background-color: rgba(17,25,40,0.5);
                 border-radius: 10px;
+                position: relative;
+                margin-right: 10px;
             }
 
             span {
                 font-size: 13px;
             }
-        }
 
+            /* Estilos para o dropdown */
+            .dropdown {
+                position: absolute;
+                right: 10px; /* Ajuste a distância do botão em relação ao lado direito da mensagem */
+                top: 50%; /* Alinha verticalmente no meio da mensagem */
+                transform: translateY(-50%); /* Corrige o alinhamento vertical */
+                display: inline-block;
+                background: transparent;
+                border: none;
+                cursor: pointer;
+            }
+
+            .dropdown button {
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-size: 16px; /* Ajuste o tamanho do ícone conforme necessário */
+                color: white; /* Ajuste a cor do ícone conforme necessário */
+            }
+
+            .dropdown-content {
+                display: none;
+                position: absolute;
+                right: 0; /* Alinha o menu ao lado direito do botão */
+                top: 100%; /* Coloca o menu logo abaixo do botão */
+                background-color: white;
+                border: 1px solid #ddd;
+                box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+                z-index: 1;
+            }
+
+            .dropdown-content.show {
+                display: block;
+                border-radius: 6px;
+                background-color: rgb(86 106 146 / 50%);
+                margin-top: 1rem;
+            }
+
+            .dropdown-content button {
+                background: none;
+                border: none;
+                padding: 8px 16px;
+                cursor: pointer;
+                display: block;
+                width: 100%; /* Faz o botão ocupar toda a largura do dropdown */
+            }
+
+            .dropdown-content button:hover {
+                background-color: #f1f1f1;
+            }
+        }
     }
 
     .bottom {
@@ -160,5 +213,4 @@
             cursor: pointer;
         }
     }
-
 }

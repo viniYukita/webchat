@@ -2,14 +2,16 @@ import { useEffect, useState } from "react";
 import "./chatList.css";
 import AddUser from "./addUser/addUser";
 import { useUserStore } from "../../../lib/userStore";
-import { doc, arrayUnion, getDoc, onSnapshot, updateDoc, collection, setDoc } from "firebase/firestore";
+import { doc, arrayUnion, getDoc, onSnapshot, updateDoc, collection, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useChatStore } from "../../../lib/chatStore";
+import { AiOutlineDownCircle } from "react-icons/ai";
 
 const ChatList = () => {
   const [chats, setChats] = useState([]);
   const [addMode, setAddMode] = useState(false);
   const [input, setInput] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(null);
 
   const { currentUser } = useUserStore();
   const { chatId, changeChat } = useChatStore();
@@ -167,6 +169,19 @@ const ChatList = () => {
     })),
   ];
 
+  const handleDeleteGroup = async (group) => {
+    try {
+      await deleteDoc(doc(db, "groups", group.id));
+      setGroups(groups.filter((g) => g.id !== group.id));
+    } catch (error) {
+      console.log("Error deleting group:", error);
+    }
+  };
+
+  const handleDropdownToggle = (id) => {
+    setDropdownOpen(dropdownOpen === id ? null : id);
+  };
+
   const filteredCombinedList = !input
     ? combinedList.filter((item) => {
       if (item.type === 'group') {
@@ -251,8 +266,32 @@ const ChatList = () => {
             <span>
               {item.type === 'chat' ? item?.user?.username : item?.groupname}
             </span>
-            <p>{item.lastMessage}</p>
+            <p>
+              {/* {item.type === 'group' && item.senderId != currentUser.id && (
+                <span> {item?.senderName} : {item.lastMessage} </span>
+              )} */}
+
+              {item.lastMessage}
+
+            </p>
           </div>
+          {item.type === 'group' && item.admin == currentUser.id && (
+            <>
+              <AiOutlineDownCircle
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDropdownToggle(item.id);
+                }}
+              />
+              {dropdownOpen === item.id && (
+                <div className="dropdown-content show" onClick={(e) => e.stopPropagation()}>
+                  <button onClick={() => handleDeleteGroup(item)}>Apagar Grupo</button>
+                </div>
+              )}
+            </>
+          )}
+
+
         </div>
       ))}
 

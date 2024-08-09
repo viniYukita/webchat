@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import "./chat.css";
 import EmojiPicker from "emoji-picker-react";
-import { arrayUnion, doc, getDoc, onSnapshot, updateDoc, setDoc, collection, serverTimestamp } from "firebase/firestore";
+import { arrayUnion, arrayRemove, doc, getDoc, onSnapshot, updateDoc, setDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useChatStore } from "../../lib/chatStore";
 import { useUserStore } from "../../lib/userStore";
 import upload from "../../lib/upload";
 import Detail from "../detail/Detail";
+import { AiOutlineDownCircle } from "react-icons/ai";
 
 const Chat = ({ isDetailVisible, onToggleDetail }) => {
     const [chat, setChat] = useState();
@@ -16,15 +17,16 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
         file: null,
         url: ""
     });
-
     const [avatar, setAvatar] = useState(null);
     const [groupname, setGroupName] = useState(null);
     const [groups, setGroups] = useState([]);
+    const [dropdownOpen, setDropdownOpen] = useState({});
 
     const { currentUser } = useUserStore();
     const { chatId, user } = useChatStore();
 
     const endRef = useRef(null);
+    const isAdmin = currentUser.role === "admin";
 
     useEffect(() => {
         endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -32,7 +34,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
 
     useEffect(() => {
         const unsub = onSnapshot(doc(db, "chats", chatId), (res) => {
-            setChat(res.data())
+            setChat(res.data());
         });
 
         const unSubGroups = onSnapshot(
@@ -74,7 +76,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
         }
     };
 
-    const handleSend = async () => { 
+    const handleSend = async () => {
         if (text === "" && !file.file) return;
 
         let fileUrl = null;
@@ -105,17 +107,18 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
 
             await updateDoc(chatRef, {
                 messages: arrayUnion(chatData),
-            }); 
+            });
 
             if (chat?.isGroup) {
                 const newChatRef = doc(collection(db, "chats"));
-                
+
                 await updateDoc(doc(db, "groupchats", chatId), {
                     chats: arrayUnion({
                         chatId: newChatRef.id,
-                        isSeenGroup: [currentUser.id], 
+                        isSeenGroup: [currentUser.id],
                         lastMessage: text,
-                        receiverId: currentUser.id,
+                        senderId: currentUser.id,
+                        senderName: currentUser.username,
                         updatedAt: Date.now(),
                     })
                 });
@@ -162,6 +165,26 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
         }
     };
 
+    const handleDeleteMessage = async (message) => {
+        if (isAdmin || message.senderId === currentUser.id) {
+            try {
+                const chatRef = doc(db, "chats", chatId);
+                await updateDoc(chatRef, {
+                    messages: arrayRemove(message),
+                });
+            } catch (error) {
+                console.log("Error deleting message:", error);
+            }
+        }
+    };
+
+    const toggleDropdown = (messageId) => {
+        setDropdownOpen(prev => ({
+            ...prev,
+            [messageId]: !prev[messageId]
+        }));
+    };
+
     const avatarToShow = groupname ? (avatar || "./avatar.png") : (user.avatar || "./avatar.png");
     const nameToShow = groupname ? groupname : user.username;
 
@@ -181,22 +204,38 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
             </div>
             <div className="center">
                 {chat?.messages?.map((message) => (
-                    <div className={message.senderId === currentUser?.id ? "message own" : "message" } key={message?.createdAt}>
-                        <div className="texts">
-                            {message.file && <a href={message.file} target="_blank" rel="noopener noreferrer">Open file</a>}
-                            <p>
-                                {message.text}
-                            </p>
-                        </div>
+                    <div className={message.senderId === currentUser?.id ? "message own" : "message"} key={message?.createdAt}>
+                    <div className="message">
+                      <div className="texts">
+                        {message.file && (
+                          <a href={message.file} target="_blank" rel="noopener noreferrer">
+                            Open file
+                          </a>
+                        )}
+                        <p>{message.text}</p>
+                        {message.senderId === currentUser.id && isAdmin && (
+                          <div className="dropdown">
+                            <button onClick={() => toggleDropdown(message.createdAt)} className="dropdown-button">
+                              <AiOutlineDownCircle />
+                            </button>
+                            {dropdownOpen[message.createdAt] && (
+                              <div className="dropdown-content show">
+                                <button onClick={() => handleDeleteMessage(message)}>Apagar mensagem</button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
+                  </div>
                 ))}
 
                 {file.url && (
-                <div className="message own">
-                    <div className="texts">
-                        <a href={file.url} target="_blank" rel="noopener noreferrer">Open file</a>
+                    <div className="message own">
+                        <div className="texts">
+                            <a href={file.url} target="_blank" rel="noopener noreferrer">Open file</a>
+                        </div>
                     </div>
-                </div>
                 )}
 
                 <div ref={endRef}></div>
@@ -207,7 +246,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                         <img src="./img.png" alt="" />
                     </label>
 
-                    <input type="file" id="file" style={{display: "none"}} onChange={handleFile}/>
+                    <input type="file" id="file" style={{ display: "none" }} onChange={handleFile} />
                     <img src="./camera.png" alt="" />
                     <img src="./mic.png" alt="" />
                 </div>
@@ -223,7 +262,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
         </div>
     );
 
-    {isVisible && <Detail/>}
+    { isVisible && <Detail /> }
 }
 
 export default Chat;
