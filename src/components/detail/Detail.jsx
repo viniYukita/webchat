@@ -13,6 +13,7 @@ const Detail = () => {
     const [groupname, setGroupName] = useState(null);
     const [groups, setGroups] = useState([]);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [isGroup, setIsGroup] = useState(false);
     const [showUserSelectionModal, setShowUserSelectionModal] = useState(false);
     const { currentUser } = useUserStore();
 
@@ -30,6 +31,7 @@ const Detail = () => {
                     const group = groupsData[0];
                     setAvatar(group.avatar);
                     setGroupName(group.groupname);
+                    setIsGroup(true);
                     setIsAdmin(group.admin === currentUser.id); // Verifica se o usuário logado é o admin
                 } else {
                     setAvatar(null);
@@ -70,7 +72,7 @@ const Detail = () => {
                 <img src={avatarToShow} alt="" />
                 <h2>{nameToShow}</h2>
             </div>
-            <div className="info">
+            {isGroup && <div className="info">
                 <div className="option">
                     <div className="title">
                         {/* Adicionar botão de adicionar usuário se for admin */}
@@ -80,24 +82,8 @@ const Detail = () => {
                             </button>
                         )}
                     </div>
-                </div>
-                <div className="option">
-                    <div className="title">
-                    </div>
-                </div>
-                <div className="option">
-                    <div className="title">
-
-                    </div>
-                    <div className="photos">
-                        <div className="photoItem">
-
-                        </div>
-                    </div>
-                </div>
-
-                <button className="logout" onClick={() => auth.signOut()}>Logout</button>
-            </div>
+                </div>                
+            </div>}
 
             {showUserSelectionModal && (
                 <UserSelectionModal
