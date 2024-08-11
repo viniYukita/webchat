@@ -24,6 +24,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
 
     const { currentUser } = useUserStore();
     const { chatId, user } = useChatStore();
+    const [isMensagemGrupo, setIsMensagemGrupo] = useState(false);
 
     const endRef = useRef(null);
     const isAdmin = currentUser.role === "admin";
@@ -49,6 +50,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                     const groupname = groupsData[0].groupname;
                     setAvatar(avatar);
                     setGroupName(groupname);
+                    setIsMensagemGrupo(true);
                 } else {
                     setAvatar(null);
                     setGroupName(null);
@@ -100,6 +102,8 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
 
             const chatData = {
                 senderId: currentUser.id,
+                senderName: currentUser.username,
+                isDeleted: false,
                 text,
                 createdAt: new Date(),
                 ...(fileUrl && { file: fileUrl }),
@@ -170,7 +174,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
             try {
                 const chatRef = doc(db, "chats", chatId);
                 await updateDoc(chatRef, {
-                    messages: arrayRemove(message),
+                    isDeleted: true,
                 });
             } catch (error) {
                 console.log("Error deleting message:", error);
@@ -203,33 +207,49 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                 </div>
             </div>
             <div className="center">
-                {chat?.messages?.map((message) => (
-                    <div className={message.senderId === currentUser?.id ? "message own" : "message"} key={message?.createdAt}>
-                    <div className="message">
-                      <div className="texts">
-                        {message.file && (
-                          <a href={message.file} target="_blank" rel="noopener noreferrer">
-                            Open file
-                          </a>
-                        )}
-                        <p>{message.text}</p>
-                        {message.senderId === currentUser.id && isAdmin && (
-                          <div className="dropdown">
-                            <button onClick={() => toggleDropdown(message.createdAt)} className="dropdown-button">
-                              <AiOutlineDownCircle />
-                            </button>
-                            {dropdownOpen[message.createdAt] && (
-                              <div className="dropdown-content show">
-                                <button onClick={() => handleDeleteMessage(message)}>Apagar mensagem</button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                {chat?.messages
+                    ?.filter(message => message.isDeleted !== true) // Filtra mensagens que não foram deletadas
+                    .map((message) => (
+                        <div
+                            className={message.senderId === currentUser?.id ? "message own" : "message"}
+                            key={message?.createdAt}
+                        >
+                            <div className="message">
+                                <div className="texts">
+                                    {message.file && (
+                                        <a href={message.file} target="_blank" rel="noopener noreferrer">
+                                            Open file
+                                        </a>
+                                    )}
 
+                                    <p className="message-content">
+                                        {isMensagemGrupo && message.senderId != currentUser.id && (
+                                            <span className="sender-name">{message?.senderName}</span>
+                                        )}
+                                        {message.text}
+                                    </p>
+
+                                    {message.senderId === currentUser.id && isAdmin && (
+                                        <div className="dropdown">
+                                            <button
+                                                onClick={() => toggleDropdown(message.createdAt)}
+                                                className="dropdown-button"
+                                            >
+                                                <AiOutlineDownCircle />
+                                            </button>
+                                            {dropdownOpen[message.createdAt] && (
+                                                <div className="dropdown-content show">
+                                                    <button onClick={() => handleDeleteMessage(message)}>
+                                                        Apagar mensagem
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 {file.url && (
                     <div className="message own">
                         <div className="texts">
@@ -240,6 +260,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
 
                 <div ref={endRef}></div>
             </div>
+
             <div className="bottom">
                 <div className="icons">
                     <label htmlFor="file">

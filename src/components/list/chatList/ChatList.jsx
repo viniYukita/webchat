@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "./chatList.css";
 import AddUser from "./addUser/addUser";
 import { useUserStore } from "../../../lib/userStore";
-import { doc, arrayUnion, getDoc, onSnapshot, updateDoc, collection, setDoc, deleteDoc } from "firebase/firestore";
+import { doc, arrayUnion, getDoc, onSnapshot, updateDoc, collection } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useChatStore } from "../../../lib/chatStore";
 import { AiOutlineDownCircle } from "react-icons/ai";
@@ -22,7 +22,7 @@ const ChatList = () => {
   useEffect(() => {
 
     const handleEscapeKey = (event) => {
-      if (event.key == "Escape") {
+      if (event.key === "Escape") {
         setAddMode(false);
       }
     }
@@ -51,7 +51,10 @@ const ChatList = () => {
     );
 
     const unSubGroups = onSnapshot(collection(db, "groups"), async (snapshot) => {
-      const groupsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const groupsData = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((group) => !group.isDeleted); // Filter out deleted groups
+
       setGroups(groupsData);
     });
 
@@ -145,6 +148,7 @@ const ChatList = () => {
             isSeenGroup: chatIndex.isSeenGroup,
             lastMessage: chatIndex.lastMessage,
             receiverId: chatIndex.receiverId,
+            isDeleted: false,
             updatedAt: Date.now(),
           })
         }, { merge: true });
@@ -164,14 +168,16 @@ const ChatList = () => {
     })),
     ...groups.map(group => ({
       ...group,
-      groupchats: groupchats.filter(x => x.id == group.id),
+      groupchats: groupchats.filter(x => x.id === group.id),
       type: 'group',
     })),
   ];
 
   const handleDeleteGroup = async (group) => {
     try {
-      await deleteDoc(doc(db, "groups", group.id));
+      await updateDoc(doc(db, "groups", group.id), {
+        isDeleted: true, // Set isDeleted to true instead of deleting the document
+      });
       setGroups(groups.filter((g) => g.id !== group.id));
     } catch (error) {
       console.log("Error deleting group:", error);
@@ -204,7 +210,9 @@ const ChatList = () => {
         if (chats.length > 0 && chats[chats.length - 1].length > 0) {
           const lastChat = chats[chats.length - 1][chats[chats.length - 1].length - 1];
           isSeen = lastChat.isSeenGroup?.includes(currentUser?.id) ? true : false;
-          lastMessage = lastChat.lastMessage;
+          if (lastChat.isDeleted != true) {
+            lastMessage = lastChat.lastMessage;
+          }
         }
 
         return {
@@ -275,7 +283,7 @@ const ChatList = () => {
 
             </p>
           </div>
-          {item.type === 'group' && item.admin == currentUser.id && (
+          {item.type === 'group' && item.admin === currentUser.id &&(
             <>
               <AiOutlineDownCircle
                 onClick={(e) => {
