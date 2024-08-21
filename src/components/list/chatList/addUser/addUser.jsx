@@ -12,42 +12,58 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUserStore } from "../../../../lib/userStore";
 
 const AddUser = ({ closeModal }) => {
   const [user, setUser] = useState(null);
+  const [input, setInput] = useState(""); // Adicionando um estado para armazenar o valor do input
   const { currentUser } = useUserStore();
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const username = formData.get("username");
-
-    try {
-      const userRef = collection(db, "users");
-      const groupRef = collection(db, "groups");
-
-      const userQuery = query(userRef, where("username", "==", username));
-      const userQuerySnapshot = await getDocs(userQuery);
-
-      const groupQuery = query(groupRef, where("groupname", "==", username));
-      const groupQuerySnapshot = await getDocs(groupQuery);
-
-      if (!userQuerySnapshot.empty) {
-        const userData = userQuerySnapshot.docs[0].data();
-        setUser(userData);
-      } else if (!groupQuerySnapshot.empty) {
-        const groupData = groupQuerySnapshot.docs[0].data();
-        setUser(groupData);
-      }
-    } catch (err) {
-      console.error("Erro ao pesquisar usuário ou grupo:", err);
+  useEffect(() => {
+    if (input.trim() === "") {
+      setUser(null); // Se o input estiver vazio, não faz a busca
+      return;
     }
+
+    const searchUser = async () => {
+      try {
+        const userRef = collection(db, "users");
+        const groupRef = collection(db, "groups");
+
+        const userQuery = query(userRef, where("username", ">=", input), where("username", "<=", input + "\uf8ff"));
+        const userQuerySnapshot = await getDocs(userQuery);
+
+        const groupQuery = query(groupRef, where("groupname", ">=", input), where("groupname", "<=", input + "\uf8ff"));
+        const groupQuerySnapshot = await getDocs(groupQuery);
+
+        if (!userQuerySnapshot.empty) {
+          const userData = userQuerySnapshot.docs[0].data();
+          setUser(userData);
+        } else if (!groupQuerySnapshot.empty) {
+          const groupData = groupQuerySnapshot.docs[0].data();
+          setUser(groupData);
+        } else {
+          setUser(null);
+        }
+      } catch (err) {
+        console.error("Erro ao pesquisar usuário ou grupo:", err);
+      }
+    };
+
+    const delayDebounceFn = setTimeout(() => {
+      searchUser();
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [input]);
+
+  const handleInputChange = (e) => {
+    setInput(e.target.value);
   };
 
   const handleAdd = async () => {
-    if (!user) return; // Certifique-se de que há um usuário ou grupo selecionado
+    if (!user) return;
 
     const chatRef = collection(db, "chats");
     const userChatsRef = user?.groupname ? collection(db, "groupchats") : collection(db, "userchats");
@@ -116,9 +132,14 @@ const AddUser = ({ closeModal }) => {
 
   return (
     <div className="addUser">
-      <form onSubmit={handleSearch}>
-        <input type="text" placeholder="Username" name="username" />
-        <button type="submit">Search</button>
+      <form>
+        <input
+          type="text"
+          placeholder="Username"
+          name="username"
+          value={input}
+          onChange={handleInputChange}
+        />
       </form>
       {user && (
         <div className="user">
