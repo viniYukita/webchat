@@ -62,6 +62,11 @@ const AddUser = ({ closeModal }) => {
     setInput(e.target.value);
   };
 
+  // Função para prevenir o comportamento padrão de enviar o formulário ao apertar Enter
+  const handleSubmit = (e) => {
+    e.preventDefault();
+  };
+
   const handleAdd = async () => {
     if (!user) return;
 
@@ -132,7 +137,7 @@ const AddUser = ({ closeModal }) => {
 
   return (
     <div className="addUser">
-      <form>
+      <form onSubmit={handleSubmit}>
         <input
           type="text"
           placeholder="Username"
