@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
-import { onSnapshot, collection, doc, updateDoc, arrayUnion } from "firebase/firestore";
+import { onSnapshot, collection, doc, updateDoc, arrayUnion, getDoc } from "firebase/firestore";
 import "./detail.css";
 import "../../lib/firebase";
 import { useChatStore } from "../../lib/chatStore";
 import { useUserStore } from "../../lib/userStore";
 import { auth, db } from "../../lib/firebase";
 import UserSelectionModal from "../list/chatList/addUser/userSelectionModal";
+import defaultAvatar from "../../../public/avatar.png";
 
 const Detail = () => {
     const { chatId, user } = useChatStore();
     const [avatar, setAvatar] = useState(null);
     const [groupname, setGroupName] = useState(null);
     const [groups, setGroups] = useState([]);
+    const [members, setMembers] = useState([]);
     const [isAdmin, setIsAdmin] = useState(false);
     const [isGroup, setIsGroup] = useState(false);
     const [showUserSelectionModal, setShowUserSelectionModal] = useState(false);
@@ -33,6 +35,13 @@ const Detail = () => {
                     setGroupName(group.groupname);
                     setIsGroup(true);
                     setIsAdmin(group.admin === currentUser.id); // Verifica se o usuário logado é o admin
+
+                    const userIds = group.usersGroup || [];
+                    if (userIds.length > 0) {
+                        const usersSnapshot = await Promise.all(userIds.map(id => getDoc(doc(db, "users", id))));
+                        const usersData = usersSnapshot.map(doc => doc.data());
+                        setMembers(usersData);
+                    }
                 } else {
                     setAvatar(null);
                     setGroupName(null);
@@ -81,6 +90,17 @@ const Detail = () => {
                                 Adicionar Usuário ao Grupo
                             </button>
                         )}
+                    </div>
+                    <div className="members">
+                        <h3>Membros do Grupo:</h3>
+                        <ul>
+                            {members.map((member) => (
+                                <li key={member.id} className="member-item"> 
+                                    <img src={member.avatar || defaultAvatar} className="member-avatar"/>
+                                    {member.username}
+                                 </li>
+                            ))}
+                        </ul>
                     </div>
                 </div>                
             </div>}
