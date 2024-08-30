@@ -95,8 +95,8 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                 await setDoc(chatRef, {
                     messages: [],
                     createdAt: serverTimestamp(),
-                    isGroup: chat?.isGroup || false, // Assumindo que `chat` já tem essa informação
-                    ...(chat?.isGroup && { groupId: chatId }), // Se for um grupo, adiciona o ID do grupo
+                    isGroup: chat?.isGroup || false,
+                    ...(chat?.isGroup && { groupId: chatId }),
                 });
             }
 
@@ -173,14 +173,50 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
         if (isAdmin || message.senderId === currentUser.id) {
             try {
                 const chatRef = doc(db, "chats", chatId);
-                await updateDoc(chatRef, {
-                    isDeleted: true,
-                });
+                const chatDoc = await getDoc(chatRef);
+                if (chatDoc.exists()) {
+                    const messages = chatDoc.data().messages.map((msg) =>
+                        msg.createdAt === message.createdAt
+                            ? { ...msg, isDeleted: true }
+                            : msg
+                    );
+
+                    await updateDoc(chatRef, {
+                        messages: messages,
+                    });
+                }
             } catch (error) {
                 console.log("Error deleting message:", error);
             }
         }
     };
+
+    const formatDateTime = (timestamp) => {
+        // Extrai segundos e nanosegundos do objeto _Timestamp
+        const seconds = timestamp.seconds;
+        const nanoseconds = timestamp.nanoseconds;
+
+        // Converte segundos e nanosegundos para milissegundos
+        const milliseconds = (seconds * 1000) + (nanoseconds / 1e6);
+
+        // Cria um objeto Date a partir dos milissegundos
+        const date = new Date(milliseconds);
+
+        // Verifica se a data é inválida
+        if (isNaN(date.getTime())) {
+            return 'Data inválida';
+        }
+
+        // Formata a data no formato desejado
+        return date.toLocaleString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    };
+
 
     const toggleDropdown = (messageId) => {
         setDropdownOpen(prev => ({
@@ -208,7 +244,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
             </div>
             <div className="center">
                 {chat?.messages
-                    ?.filter(message => message.isDeleted !== true) // Filtra mensagens que não foram deletadas
+                    ?.filter(message => message.isDeleted !== true)
                     .map((message) => (
                         <div
                             className={message.senderId === currentUser?.id ? "message own" : "message"}
@@ -223,10 +259,14 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                                     )}
 
                                     <p className="message-content">
-                                        {isMensagemGrupo && message.senderId != currentUser.id && (
+                                        {isMensagemGrupo && message.senderId !== currentUser.id && (
                                             <span className="sender-name">{message?.senderName}</span>
                                         )}
                                         {message.text}
+
+                                        <p className="message-timestamp">
+                                            {formatDateTime(message.createdAt)}
+                                        </p>
                                     </p>
 
                                     {message.senderId === currentUser.id && isAdmin && (

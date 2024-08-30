@@ -69,7 +69,8 @@
             max-width: 100%;
             display: flex;
             gap: 20px;
-            position: relative; /* Adicionado para o posicionamento absoluto do dropdown */
+            position: relative;
+            /* Adicionado para o posicionamento absoluto do dropdown */
 
             &.own {
                 align-self: flex-end;
@@ -100,25 +101,38 @@
                 .message-content {
                     display: flex;
                     flex-direction: column;
-                    align-items: flex-start; /* Alinha o conteúdo à esquerda */
+                    align-items: flex-start;
+                    /* Alinha o conteúdo à esquerda */
                     margin: 0;
                     padding: 0;
-                    font-size: 14px; /* Tamanho da fonte da mensagem */
+                    font-size: 14px;
+                    /* Tamanho da fonte da mensagem */
                     margin-right: 2rem;
+
+                    .message-timestamp {
+                        display: flex;
+                        align-content: end;
+                        align-items: end;
+                        flex-direction: row;
+                        font-size: 10px;
+                        color: #9b9b9b;
+                    }
                 }
-                
+
                 .sender-name {
-                    font-size: 12px; /* Tamanho menor para o nome do remetente */
+                    font-size: 12px;
+                    /* Tamanho menor para o nome do remetente */
                     font-weight: bold;
-                    margin-bottom: 4px; /* Espaçamento entre o nome do remetente e a mensagem */
+                    margin-bottom: 4px;
+                    /* Espaçamento entre o nome do remetente e a mensagem */
                     color: #8f8f8f;
                 }
-                
+
             }
 
             p {
                 padding: 20px;
-                background-color: rgba(17,25,40,0.5);
+                background-color: rgba(17, 25, 40, 0.5);
                 border-radius: 10px;
                 position: relative;
                 margin-right: 10px;
@@ -131,9 +145,12 @@
             /* Estilos para o dropdown */
             .dropdown {
                 position: absolute;
-                right: 10px; /* Ajuste a distância do botão em relação ao lado direito da mensagem */
-                top: 50%; /* Alinha verticalmente no meio da mensagem */
-                transform: translateY(-50%); /* Corrige o alinhamento vertical */
+                right: 10px;
+                /* Ajuste a distância do botão em relação ao lado direito da mensagem */
+                top: 50%;
+                /* Alinha verticalmente no meio da mensagem */
+                transform: translateY(-50%);
+                /* Corrige o alinhamento vertical */
                 display: inline-block;
                 background: transparent;
                 border: none;
@@ -144,18 +161,22 @@
                 background: none;
                 border: none;
                 cursor: pointer;
-                font-size: 16px; /* Ajuste o tamanho do ícone conforme necessário */
-                color: white; /* Ajuste a cor do ícone conforme necessário */
+                font-size: 16px;
+                /* Ajuste o tamanho do ícone conforme necessário */
+                color: white;
+                /* Ajuste a cor do ícone conforme necessário */
             }
 
             .dropdown-content {
                 display: none;
                 position: absolute;
-                right: 0; /* Alinha o menu ao lado direito do botão */
-                top: 100%; /* Coloca o menu logo abaixo do botão */
+                right: 0;
+                /* Alinha o menu ao lado direito do botão */
+                top: 100%;
+                /* Coloca o menu logo abaixo do botão */
                 background-color: white;
                 border: 1px solid #ddd;
-                box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+                box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
                 z-index: 1;
             }
 
@@ -172,7 +193,8 @@
                 padding: 8px 16px;
                 cursor: pointer;
                 display: block;
-                width: 100%; /* Faz o botão ocupar toda a largura do dropdown */
+                width: 100%;
+                /* Faz o botão ocupar toda a largura do dropdown */
             }
 
             .dropdown-content button:hover {
@@ -203,7 +225,7 @@
 
         input {
             flex: 1;
-            background-color: rgba(17,25,40,0.5);
+            background-color: rgba(17, 25, 40, 0.5);
             border: none;
             outline: none;
             color: white;
