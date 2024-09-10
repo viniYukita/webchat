@@ -174,16 +174,19 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
             try {
                 const chatRef = doc(db, "chats", chatId);
                 const chatDoc = await getDoc(chatRef);
+    
                 if (chatDoc.exists()) {
+                    // Pegando o array de mensagens do documento
                     const messages = chatDoc.data().messages.map((msg) =>
-                        msg.createdAt === message.createdAt
-                            ? { ...msg, isDeleted: true }
+                        // Comparando o senderId e createdAt para garantir que seja a mensagem correta
+                        msg.senderId === message.senderId && 
+                        msg.createdAt.toMillis() === message.createdAt.toMillis()
+                            ? { ...msg, isDeleted: true } // Atualizando o campo isDeleted
                             : msg
                     );
-
-                    await updateDoc(chatRef, {
-                        messages: messages,
-                    });
+    
+                    // Atualizando o documento no Firestore
+                    await updateDoc(chatRef, { messages });
                 }
             } catch (error) {
                 console.log("Error deleting message:", error);
