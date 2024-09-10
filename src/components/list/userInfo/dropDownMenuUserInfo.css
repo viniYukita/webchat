@@ -9,6 +9,7 @@
     border-radius: 15px;
     background: #062b40;
     border: 1px solid grey;
+    z-index: 1;
 }
 
 ul {
@@ -25,5 +26,9 @@ a {
 }
 
 .logout-btn {
+    margin-top: 1rem;
+}
+
+.mensagemOpt {
     margin-top: 1rem;
 }
