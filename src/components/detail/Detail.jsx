@@ -95,9 +95,9 @@ const Detail = () => {
                         <h3>Membros do Grupo:</h3>
                         <ul>
                             {members.map((member) => (
-                                <li key={member.id} className="member-item"> 
-                                    <img src={member.avatar || defaultAvatar} className="member-avatar"/>
-                                    {member.username}
+                                <li key={member?.id} className="member-item"> 
+                                    <img src={member?.avatar || defaultAvatar} className="member-avatar"/>
+                                    {member?.username}
                                  </li>
                             ))}
                         </ul>
