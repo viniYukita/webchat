@@ -1,0 +1,34 @@
+.dropDownMenuUser {
+    font-size:13px;
+    position: absolute;
+    top: 3.5rem;
+    right: 1.5rem;
+    left: 25%;
+    width: 120px;
+    padding: 15px;
+    border-radius: 15px;
+    background: #062b40;
+    border: 1px solid grey;
+    z-index: 1;
+}
+
+ul {
+    list-style-type: none;
+}
+
+li {
+    cursor: pointer;
+}
+
+a {
+    text-decoration: none;
+    color: white;
+}
+
+.logout-btn {
+    margin-top: 1rem;
+}
+
+.mensagemOpt {
+    margin-top: 1rem;
+}
