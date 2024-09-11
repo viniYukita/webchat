@@ -17,7 +17,7 @@ const Login = () => {
         const { email, senha } = Object.fromEntries(formData);
 
         try {
-            await signInWithEmailAndPassword(auth, email, senha);
+            await signInWithEmailAndPassword(auth, email.trim(), senha);
 
         } catch (error) {
             console.log(error);

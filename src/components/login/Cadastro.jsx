@@ -20,9 +20,13 @@ const Cadastro = () => {
 
     useEffect(() => {
         const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
-            const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const usersData = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .filter(user => !user.isDeleted)
+                .sort((a, b) => a.username.localeCompare(b.username));
             setUserList(usersData);
         });
+                
 
         return () => unsubscribe();
     }, []);
@@ -68,7 +72,7 @@ const Cadastro = () => {
                 toast.success("Dados do usuário atualizados com sucesso!");
             } else {
                 // Cadastrar novo usuário
-                const response = await createUserWithEmailAndPassword(auth, email, senha);
+                const response = await createUserWithEmailAndPassword(auth, email.trim(), senha);
                 const imgUrl = await upload(avatar.file);
 
                 await setDoc(doc(db, "users", response.user.uid), {
