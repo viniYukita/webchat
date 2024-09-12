@@ -26,7 +26,7 @@ const Cadastro = () => {
                 .sort((a, b) => a.username.localeCompare(b.username));
             setUserList(usersData);
         });
-                
+
 
         return () => unsubscribe();
     }, []);
@@ -123,6 +123,20 @@ const Cadastro = () => {
             try {
                 const userDocRef = doc(db, "users", selectedUser.id);
                 await updateDoc(userDocRef, { isDeleted: true });
+
+                const groupsQuery = query(collection(db, "groups"), where("usersGroup", "array-contains", selectedUser.id));
+                const groupsSnapshot = await getDocs(groupsQuery);
+
+                const batch = db.batch();
+                groupsSnapshot.forEach((groupDoc) => {
+                    const groupRef = doc(db, "groups", groupDoc.id);
+                    batch.update(groupRef, {
+                        usersGroup: arrayRemove(selectedUser.id)
+                    });
+                });
+
+                await batch.commit();
+
                 toast.success("Usuário excluído com sucesso!");
                 setSelectedUser(null);
                 setAvatar({ file: null, url: "" });

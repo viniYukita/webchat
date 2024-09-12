@@ -46,6 +46,7 @@
             .members {
                 overflow-y: auto; /* Adicione uma barra de rolagem vertical */
                 height: 300px;
+                margin-top: 3rem;
 
                 .member-item {
                     display: flex;

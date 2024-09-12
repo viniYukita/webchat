@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { onSnapshot, collection, doc, updateDoc, arrayUnion, getDoc } from "firebase/firestore";
+import { onSnapshot, collection, doc, updateDoc, arrayUnion, getDoc, arrayRemove } from "firebase/firestore";
 import "./detail.css";
 import "../../lib/firebase";
 import { useChatStore } from "../../lib/chatStore";
@@ -11,6 +11,7 @@ import defaultAvatar from "../../../public/avatar.png";
 const Detail = () => {
     const { chatId, user } = useChatStore();
     const [avatar, setAvatar] = useState(null);
+    const [groupId, setGroupId] = useState(false);
     const [groupname, setGroupName] = useState(null);
     const [groups, setGroups] = useState([]);
     const [members, setMembers] = useState([]);
@@ -33,6 +34,7 @@ const Detail = () => {
                     const group = groupsData[0];
                     setAvatar(group.avatar);
                     setGroupName(group.groupname);
+                    setGroupId(group.id);
                     setIsGroup(true);
                     setIsAdmin(group.admin === currentUser.id); // Verifica se o usuário logado é o admin
 
@@ -72,6 +74,24 @@ const Detail = () => {
         }
     };
 
+    const handleRemove = async (memberId, groupId) => {
+        const isConfirmed = window.confirm("Você tem certeza que deseja remover este membro do grupo?");
+
+        if (!isConfirmed) {
+            return;
+        }
+
+        try {
+            const groupRef = doc(db, "groups", groupId);
+            await updateDoc(groupRef, {
+                usersGroup: arrayRemove(memberId)
+            });
+            console.log("Usuário removido")
+        } catch (e) {
+            console.log("Erro ao tentar remover usuário do grupo >> " + e)
+        }
+    };
+
     const avatarToShow = groupname ? (avatar || "./avatar.png") : (user.avatar || "./avatar.png");
     const nameToShow = groupname ? groupname : user.username;
 
@@ -95,14 +115,19 @@ const Detail = () => {
                         <h3>Membros do Grupo:</h3>
                         <ul>
                             {members.map((member) => (
-                                <li key={member?.id} className="member-item"> 
-                                    <img src={member?.avatar || defaultAvatar} className="member-avatar"/>
+                                <li key={member?.id} className="member-item">
+                                    <img src={member?.avatar || defaultAvatar} className="member-avatar" />
                                     {member?.username}
-                                 </li>
+                                    {isAdmin && member?.id !== currentUser.id && (
+                                        <button onClick={() => handleRemove(member?.id, groupId)} className="remove-btn">
+                                            Remover
+                                        </button>
+                                    )}
+                                </li>
                             ))}
                         </ul>
                     </div>
-                </div>                
+                </div>
             </div>}
 
             {showUserSelectionModal && (
