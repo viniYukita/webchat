@@ -37,15 +37,19 @@ const ChatList = () => {
           const promises = items.map(async (item) => {
             const userDocRef = doc(db, "users", item.receiverId);
             const userDocSnap = await getDoc(userDocRef);
-
             const user = userDocSnap.data();
 
-            return { ...item, user };
-          });
+            if (!user?.isDeleted && user?.id) {
+              return { ...item, user };
+            }
+            
+            return null;
+          })
 
           const chatData = await Promise.all(promises);
+          const validChats = chatData.filter(chat => chat !== null);
 
-          setChats(chatData.sort((a, b) => b.updatedAt - a.updatedAt));
+          setChats(validChats.sort((a, b) => b.updatedAt - a.updatedAt));
         }
       }
     );
@@ -283,7 +287,7 @@ const ChatList = () => {
 
             </p>
           </div>
-          {item.type === 'group' && item.admin === currentUser.id &&(
+          {item.type === 'group' && item.admin === currentUser.id && (
             <>
               <AiOutlineDownCircle
                 onClick={(e) => {
