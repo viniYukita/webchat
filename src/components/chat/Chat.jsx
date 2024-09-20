@@ -255,15 +255,13 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                         >
                             <div className="message">
                                 <div className="texts">
-                                    {message.file && (
-                                        <a href={message.file} target="_blank" rel="noopener noreferrer">
-                                            Open file
-                                        </a>
-                                    )}
-
                                     <p className="message-content">
-                                        {isMensagemGrupo && message.senderId !== currentUser.id && (
-                                            <span className="sender-name">{message?.senderName}</span>
+                                        
+                                        <span className="sender-name">{message?.senderName}</span>
+                                        {message.file && (
+                                            <a href={message.file} target="_blank" rel="noopener noreferrer">
+                                                Abrir arquivo
+                                            </a>
                                         )}
                                         {message.text}
 
@@ -293,13 +291,6 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                             </div>
                         </div>
                     ))}
-                {file.url && (
-                    <div className="message own">
-                        <div className="texts">
-                            <a href={file.url} target="_blank" rel="noopener noreferrer">Open file</a>
-                        </div>
-                    </div>
-                )}
 
                 <div ref={endRef}></div>
             </div>
