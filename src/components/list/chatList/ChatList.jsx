@@ -18,14 +18,15 @@ const ChatList = () => {
 
   const [groups, setGroups] = useState([]);
   const [groupchats, setGroupChats] = useState([]);
+  
+  const [unreadCount, setUnreadCount] = useState(0); // Estado para contar mensagens não lidas
 
   useEffect(() => {
-
     const handleEscapeKey = (event) => {
       if (event.key === "Escape") {
         setAddMode(false);
       }
-    }
+    };
 
     const unSub = onSnapshot(
       doc(db, "userchats", currentUser?.id),
@@ -33,7 +34,6 @@ const ChatList = () => {
         const items = res.data()?.chats;
 
         if (items) {
-
           const promises = items.map(async (item) => {
             const userDocRef = doc(db, "users", item.receiverId);
             const userDocSnap = await getDoc(userDocRef);
@@ -42,12 +42,15 @@ const ChatList = () => {
             if (!user?.isDeleted && user?.id) {
               return { ...item, user };
             }
-            
             return null;
-          })
+          });
 
           const chatData = await Promise.all(promises);
           const validChats = chatData.filter(chat => chat !== null);
+
+          // Atualiza as mensagens não lidas
+          const unreadMessages = validChats.filter(chat => !chat.isSeen);
+          setUnreadCount(unreadMessages.length); // Atualiza a contagem de não lidas
 
           setChats(validChats.sort((a, b) => b.updatedAt - a.updatedAt));
         }
@@ -64,8 +67,8 @@ const ChatList = () => {
 
     const unnSubGroupChats = onSnapshot(collection(db, "groupchats"), async (snapshot) => {
       const groupChatsData = snapshot.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
-      .sort((a, b) => a.updatedAt - b.updatedAt);
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .sort((a, b) => a.updatedAt - b.updatedAt);
       setGroupChats(groupChatsData);
     });
 
@@ -79,10 +82,17 @@ const ChatList = () => {
     };
   }, [currentUser?.id]);
 
+  // Atualize o título da aba baseado nas mensagens não lidas
+  useEffect(() => {
+    if (unreadCount > 0) {
+      document.title = `(${unreadCount}) Novas mensagens`;
+    } else {
+      document.title = "Chat App";
+    }
+  }, [unreadCount]); // Mude o título da aba sempre que `unreadCount` mudar
+
   const handleSelect = async (chat) => {
     if (chat.type === "group") {
-
-      // Verifica se o grupo já possui um chatId
       if (!chat.chatId) {
         const chatId = chat.id;
         chat.chatId = chatId;
@@ -90,7 +100,6 @@ const ChatList = () => {
 
       changeChat(chat.chatId, currentUser?.id);
     } else {
-      // Mantém a conversa individual na lista de chats
       if (!chats.find(c => c.chatId === chat.chatId)) {
         chats.push(chat);
       }
@@ -98,7 +107,6 @@ const ChatList = () => {
       changeChat(chat.chatId, chat.user);
     }
 
-    // Atualiza o estado de userChats mantendo todas as conversas visíveis
     const updatedUserChats = chats.map((item) => {
       const { user, ...rest } = item;
       return rest;
@@ -120,11 +128,8 @@ const ChatList = () => {
         console.log(err);
       }
     } else {
-
       const groupChatsRef = doc(db, "groupchats", chat.chatId);
-
       const groupChatSnapshot = await getDoc(groupChatsRef);
-
       const groupChatData = groupChatSnapshot.data();
 
       var maxIndex = -1;
@@ -134,19 +139,16 @@ const ChatList = () => {
           return currentIndex > maxIndex ? currentIndex : maxIndex;
         }, 0);
       } else {
-        //ainda não houve troca de mensagens no grupo
         return;
       }
 
       const chatIndex = groupChatData.chats[maxIndex];
-
       const hasUser = chatIndex.isSeenGroup.findIndex(
         (item) => item === currentUser.id
       );
 
       if (hasUser < 0) {
-
-        chatIndex.isSeenGroup.push(currentUser.id)
+        chatIndex.isSeenGroup.push(currentUser.id);
 
         await updateDoc(doc(db, "groupchats", chat.chatId), {
           chats: arrayUnion({
@@ -161,7 +163,6 @@ const ChatList = () => {
 
         return;
       } else {
-        // Se o usuario ja visualizou a mensagem retorna
         return;
       }
     }
@@ -182,7 +183,7 @@ const ChatList = () => {
   const handleDeleteGroup = async (group) => {
     try {
       await updateDoc(doc(db, "groups", group.id), {
-        isDeleted: true, // Set isDeleted to true instead of deleting the document
+        isDeleted: true,
       });
       setGroups(groups.filter((g) => g.id !== group.id));
     } catch (error) {
@@ -195,7 +196,7 @@ const ChatList = () => {
   };
 
   const filteredCombinedList = !input
-  ? combinedList
+    ? combinedList
       .filter((item) => {
         if (item.type === 'group') {
           const isUserInGroup = item.usersGroup?.includes(currentUser?.id);
@@ -213,27 +214,34 @@ const ChatList = () => {
 
           let isSeen = false;
           let lastMessage = "";
-          if (chats.length > 0 && chats[chats.length - 1].length > 0) {
-            const lastChat = chats[chats.length - 1][chats[chats.length - 1].length - 1];
-            isSeen = lastChat.isSeenGroup?.includes(currentUser?.id) ? true : false;
-            if (lastChat.isDeleted !== true) {
-              lastMessage = lastChat.lastMessage;
+          let unreadMessagesCount = 0;
+
+          if (chats.length > 0) {
+            for (const chat of chats) {
+              const isUserSeen = chat.isSeenGroup?.includes(currentUser?.id);
+              if (!isUserSeen) {
+                unreadMessagesCount++;
+              }
+              if (chat.length > 0 && chat[chat.length - 1].isDeleted !== true) {
+                lastMessage = chat[chat.length - 1].lastMessage;
+              }
             }
+            isSeen = unreadMessagesCount === 0;
           }
 
           return {
             ...item,
             isSeen,
             lastMessage,
+            unreadMessagesCount,
             updatedAt: chats.length > 0 ? chats[chats.length - 1][chats[chats.length - 1].length - 1].updatedAt : item.updatedAt,
           };
         }
 
         return item;
       })
-      // Ordena pelo campo `updatedAt` de forma decrescente
       .sort((a, b) => b.updatedAt - a.updatedAt)
-  : combinedList
+    : combinedList
       .filter((item) => {
         if (item.type === 'chat') {
           return item?.user?.username.toLowerCase().includes(input.toLowerCase());
@@ -243,7 +251,6 @@ const ChatList = () => {
         }
         return false;
       })
-      // Ordena pelo campo `updatedAt` de forma decrescente
       .sort((a, b) => b.updatedAt - a.updatedAt);
 
   return (
@@ -286,12 +293,7 @@ const ChatList = () => {
               {item.type === 'chat' ? item?.user?.username : item?.groupname}
             </span>
             <p>
-              {/* {item.type === 'group' && item.senderId != currentUser.id && (
-                <span> {item?.senderName} : {item.lastMessage} </span>
-              )} */}
-
               {item.lastMessage}
-
             </p>
           </div>
           {item.type === 'group' && item.admin === currentUser.id && (
@@ -309,8 +311,6 @@ const ChatList = () => {
               )}
             </>
           )}
-
-
         </div>
       ))}
 
