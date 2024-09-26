@@ -196,62 +196,63 @@ const ChatList = () => {
   };
 
   const filteredCombinedList = !input
-    ? combinedList
-      .filter((item) => {
-        if (item.type === 'group') {
-          const isUserInGroup = item.usersGroup?.includes(currentUser?.id);
-          const isAdmin = item.admin === currentUser?.id;
-          const hasChat = item.hasChat;
+  ? combinedList
+    .filter((item) => {
+      if (item.type === 'group') {
+        const isUserInGroup = item.usersGroup?.includes(currentUser?.id);
+        const isAdmin = item.admin === currentUser?.id;
+        const hasChat = item.hasChat;
 
-          return (isUserInGroup || isAdmin) && hasChat;
-        }
-        return true;
-      })
-      .map((item) => {
-        if (item.type === 'group') {
-          const groups = item.groupchats || {};
-          const chats = groups.map(x => x.chats) || [];
+        return (isUserInGroup || isAdmin) && hasChat;
+      }
+      return true;
+    })
+    .map((item) => {
+      if (item.type === 'group') {
+        const groups = item.groupchats || {};
+        const chats = groups.map(x => x.chats) || [];
 
-          let isSeen = false;
-          let lastMessage = "";
-          let unreadMessagesCount = 0;
+        let isSeen = false;
+        let lastMessage = "";
+        let unreadMessagesCount = 0;
 
-          if (chats.length > 0) {
-            for (const chat of chats) {
-              const isUserSeen = chat.isSeenGroup?.includes(currentUser?.id);
-              if (!isUserSeen) {
-                unreadMessagesCount++;
-              }
-              if (chat.length > 0 && chat[chat.length - 1].isDeleted !== true) {
-                lastMessage = chat[chat.length - 1].lastMessage;
-              }
+        if (chats.length > 0) {
+          for (const chat of chats) {
+            const isUserSeen = chat.isSeenGroup?.includes(currentUser?.id);
+            if (!isUserSeen) {
+              unreadMessagesCount++;
             }
-            isSeen = unreadMessagesCount === 0;
+            if (chat.length > 0 && chat[chat.length - 1].isDeleted !== true) {
+              lastMessage = chat[chat.length - 1].lastMessage;
+            }
           }
-
-          return {
-            ...item,
-            isSeen,
-            lastMessage,
-            unreadMessagesCount,
-            updatedAt: chats.length > 0 ? chats[chats.length - 1][chats[chats.length - 1].length - 1].updatedAt : item.updatedAt,
-          };
+          isSeen = unreadMessagesCount === 0;
         }
 
-        return item;
-      })
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-    : combinedList
-      .filter((item) => {
-        if (item.type === 'chat') {
-          return item?.user?.username.toLowerCase().includes(input.toLowerCase());
-        } else if (item.type === 'group') {
-          const isMemberOrAdmin = item.usersGroup?.includes(currentUser?.id) || item.admin === currentUser?.id;
-          return isMemberOrAdmin && item.groupname.toLowerCase().includes(input.toLowerCase());
-        }
-        return false;
-      })
-      .sort((a, b) => b.updatedAt - a.updatedAt);
+        return {
+          ...item,
+          isSeen,
+          lastMessage,
+          unreadMessagesCount,
+          updatedAt: chats.length > 0 ? chats[chats.length - 1]?.updatedAt : item.updatedAt || 0, // Verificação aqui
+        };
+      }
+
+      return item;
+    })
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)) // Verificação ao comparar
+  : combinedList
+    .filter((item) => {
+      if (item.type === 'chat') {
+        return item?.user?.username?.toLowerCase().includes(input.toLowerCase());
+      } else if (item.type === 'group') {
+        const isMemberOrAdmin = item.usersGroup?.includes(currentUser?.id) || item.admin === currentUser?.id;
+        return isMemberOrAdmin && item.groupname?.toLowerCase().includes(input.toLowerCase());
+      }
+      return false;
+    })
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)); // Verificação ao comparar
+
 
   return (
     <div className="chatList">
