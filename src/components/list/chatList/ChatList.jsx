@@ -63,7 +63,9 @@ const ChatList = () => {
     });
 
     const unnSubGroupChats = onSnapshot(collection(db, "groupchats"), async (snapshot) => {
-      const groupChatsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const groupChatsData = snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }))
+      .sort((a, b) => a.updatedAt - b.updatedAt);
       setGroupChats(groupChatsData);
     });
 
@@ -193,51 +195,56 @@ const ChatList = () => {
   };
 
   const filteredCombinedList = !input
-    ? combinedList.filter((item) => {
-      if (item.type === 'group') {
+  ? combinedList
+      .filter((item) => {
+        if (item.type === 'group') {
+          const isUserInGroup = item.usersGroup?.includes(currentUser?.id);
+          const isAdmin = item.admin === currentUser?.id;
+          const hasChat = item.hasChat;
 
-        const isUserInGroup = item.usersGroup?.includes(currentUser?.id);
-        const isAdmin = item.admin === currentUser?.id;
-        const hasChat = item.hasChat;
+          return (isUserInGroup || isAdmin) && hasChat;
+        }
+        return true;
+      })
+      .map((item) => {
+        if (item.type === 'group') {
+          const groups = item.groupchats || {};
+          const chats = groups.map(x => x.chats) || [];
 
-        return (isUserInGroup || isAdmin) && hasChat;
-      }
-      return true;
-    }).map((item) => {
-
-      if (item.type === 'group') {
-        const groups = item.groupchats || {};
-        const chats = groups.map(x => x.chats) || [];
-
-        var isSeen = false;
-        var lastMessage = "";
-        if (chats.length > 0 && chats[chats.length - 1].length > 0) {
-          const lastChat = chats[chats.length - 1][chats[chats.length - 1].length - 1];
-          isSeen = lastChat.isSeenGroup?.includes(currentUser?.id) ? true : false;
-          if (lastChat.isDeleted != true) {
-            lastMessage = lastChat.lastMessage;
+          let isSeen = false;
+          let lastMessage = "";
+          if (chats.length > 0 && chats[chats.length - 1].length > 0) {
+            const lastChat = chats[chats.length - 1][chats[chats.length - 1].length - 1];
+            isSeen = lastChat.isSeenGroup?.includes(currentUser?.id) ? true : false;
+            if (lastChat.isDeleted !== true) {
+              lastMessage = lastChat.lastMessage;
+            }
           }
+
+          return {
+            ...item,
+            isSeen,
+            lastMessage,
+            updatedAt: chats.length > 0 ? chats[chats.length - 1][chats[chats.length - 1].length - 1].updatedAt : item.updatedAt,
+          };
         }
 
-        return {
-          ...item,
-          isSeen,
-          lastMessage,
-        };
-      }
-
-      return item;
-    })
-    : combinedList.filter((item) => {
-      if (item.type === 'chat') {
-        return item?.user?.username.toLowerCase().includes(input.toLowerCase());
-      } else if (item.type === 'group') {
-        // Verifica se userGroup está definido
-        const isMemberOrAdmin = item.usersGroup?.includes(currentUser?.id) || item.admin === currentUser?.id;
-        return isMemberOrAdmin && item.groupname.toLowerCase().includes(input.toLowerCase());
-      }
-      return false;
-    });
+        return item;
+      })
+      // Ordena pelo campo `updatedAt` de forma decrescente
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+  : combinedList
+      .filter((item) => {
+        if (item.type === 'chat') {
+          return item?.user?.username.toLowerCase().includes(input.toLowerCase());
+        } else if (item.type === 'group') {
+          const isMemberOrAdmin = item.usersGroup?.includes(currentUser?.id) || item.admin === currentUser?.id;
+          return isMemberOrAdmin && item.groupname.toLowerCase().includes(input.toLowerCase());
+        }
+        return false;
+      })
+      // Ordena pelo campo `updatedAt` de forma decrescente
+      .sort((a, b) => b.updatedAt - a.updatedAt);
 
   return (
     <div className="chatList">
