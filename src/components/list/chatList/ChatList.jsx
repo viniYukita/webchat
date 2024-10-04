@@ -74,31 +74,31 @@ const ChatList = () => {
     const unSubGroups = onSnapshot(collection(db, "groups"), async (snapshot) => {
       const groupsData = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((group) => !group.isDeleted); // Filter out deleted groups
-
+        .filter((group) => !group.isDeleted && group.usersGroup?.includes(currentUser?.id)); // Filtra os grupos que o usuário faz parte
+    
       setGroups(groupsData);
     });
 
     const unnSubGroupChats = onSnapshot(collection(db, "groupchats"), async (snapshot) => {
       const groupChatsData = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .sort((a, b) => a.updatedAt - b.updatedAt);
-
+        .filter(groupChat => groups.some(group => group.id === groupChat.id)) // Filtra os groupchats dos grupos que o usuário participa
+        .sort((a, b) => a.updatedAt - b.updatedAt); // Ordena os grupos pela data de atualização
+    
       // Itera sobre cada grupo para verificar a última mensagem
       groupChatsData.forEach((groupChat) => {
         if (groupChat.chats && groupChat.chats.length > 0) {
           const lastMessage = groupChat.chats[groupChat.chats.length - 1];
-
-          if (lastMessage.senderId !== currentUser?.id && !lastMessage.isSeenGroup.includes(currentUser?.id)) {
-            console.log("Toca o som!"); // Ou use alert para testes
-            // playNotificationSound(); // Toca o som de notificação para grupos
+    
+          if (lastMessage.senderId !== currentUser?.id && !lastMessage.isSeenGroup?.includes(currentUser?.id)) {
+            playNotificationSound();
           }
         }
       });
-
-      setGroupChats(groupChatsData); // Atualiza o estado com os chats ordenados
+    
+      setGroupChats(groupChatsData); // Atualiza o estado com os groupchats
     });
-
+    
     document.addEventListener("keydown", handleEscapeKey);
 
     return () => {
@@ -258,7 +258,7 @@ const ChatList = () => {
 
         return item;
       })
-      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)) // Ordenação das mais novas para as mais antigas
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
     : combinedList
       .filter((item) => {
         if (item.type === 'chat') {
@@ -269,7 +269,7 @@ const ChatList = () => {
         }
         return false;
       })
-      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)); // Ordenação correta aqui também
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
 
   return (
