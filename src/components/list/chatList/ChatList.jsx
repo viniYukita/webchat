@@ -7,6 +7,8 @@ import { db } from "../../../lib/firebase";
 import { useChatStore } from "../../../lib/chatStore";
 import { AiOutlineDownCircle } from "react-icons/ai";
 
+import notificationSound from "../../../assets/notification.mp3";
+
 const ChatList = () => {
   const [chats, setChats] = useState([]);
   const [addMode, setAddMode] = useState(false);
@@ -18,8 +20,13 @@ const ChatList = () => {
 
   const [groups, setGroups] = useState([]);
   const [groupchats, setGroupChats] = useState([]);
-  
+
   const [unreadCount, setUnreadCount] = useState(0); // Estado para contar mensagens não lidas
+
+  const playNotificationSound = () => {
+    const audio = new Audio(notificationSound);
+    audio.play();
+  };
 
   useEffect(() => {
     const handleEscapeKey = (event) => {
@@ -52,6 +59,13 @@ const ChatList = () => {
           const unreadMessages = validChats.filter(chat => !chat.isSeen);
           setUnreadCount(unreadMessages.length); // Atualiza a contagem de não lidas
 
+          if (validChats.length > 0) {
+            const lastChat = validChats[0];
+            if (lastChat.senderId !== currentUser?.id && !lastChat.isSeen) {
+              playNotificationSound(); // Toca o som
+            }
+          }
+
           setChats(validChats.sort((a, b) => b.updatedAt - a.updatedAt));
         }
       }
@@ -69,7 +83,20 @@ const ChatList = () => {
       const groupChatsData = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
         .sort((a, b) => a.updatedAt - b.updatedAt);
-      setGroupChats(groupChatsData);
+
+      // Itera sobre cada grupo para verificar a última mensagem
+      groupChatsData.forEach((groupChat) => {
+        if (groupChat.chats && groupChat.chats.length > 0) {
+          const lastMessage = groupChat.chats[groupChat.chats.length - 1];
+
+          if (lastMessage.senderId !== currentUser?.id && !lastMessage.isSeenGroup.includes(currentUser?.id)) {
+            console.log("Toca o som!"); // Ou use alert para testes
+            // playNotificationSound(); // Toca o som de notificação para grupos
+          }
+        }
+      });
+
+      setGroupChats(groupChatsData); // Atualiza o estado com os chats ordenados
     });
 
     document.addEventListener("keydown", handleEscapeKey);
@@ -93,77 +120,67 @@ const ChatList = () => {
 
   const handleSelect = async (chat) => {
     if (chat.type === "group") {
+      // Verifica se o grupo já possui um chatId associado
       if (!chat.chatId) {
         const chatId = chat.id;
         chat.chatId = chatId;
       }
 
+      // Altera o chat ativo no estado global
       changeChat(chat.chatId, currentUser?.id);
+
+      // Obtém as mensagens do grupo
+      const groupChatsRef = doc(db, "groupchats", chat.chatId);
+      const groupChatSnapshot = await getDoc(groupChatsRef);
+      const groupChatData = groupChatSnapshot.data();
+
+      if (!groupChatData) return;
+
+      const { chats: groupMessages } = groupChatData;
+
+      // Atualiza o campo isSeenGroup nas mensagens que ainda não foram vistas pelo usuário
+      const messagesToUpdate = groupMessages.filter(
+        (message) => !message.isSeenGroup?.includes(currentUser?.id)
+      );
+
+      const updatedMessages = messagesToUpdate.map((message) => ({
+        ...message,
+        isSeenGroup: [...(message.isSeenGroup || []), currentUser?.id], // Adiciona o ID do usuário ao array isSeenGroup
+      }));
+
+      // Atualiza o Firestore com as mensagens modificadas
+      await updateDoc(groupChatsRef, {
+        chats: arrayUnion(...updatedMessages) // Atualiza as mensagens com o campo isSeenGroup atualizado
+      });
+
     } else {
+      // Lógica para chats individuais permanece igual
       if (!chats.find(c => c.chatId === chat.chatId)) {
         chats.push(chat);
       }
 
       changeChat(chat.chatId, chat.user);
-    }
 
-    const updatedUserChats = chats.map((item) => {
-      const { user, ...rest } = item;
-      return rest;
-    });
+      const updatedUserChats = chats.map((item) => {
+        const { user, ...rest } = item;
+        return rest;
+      });
 
-    const chatIndex = updatedUserChats.findIndex(
-      (item) => item.chatId === chat.chatId
-    );
-
-    if (!chat.groupname) {
-      updatedUserChats[chatIndex].isSeen = true;
-      const userChatsRef = doc(db, "userchats", currentUser?.id);
-
-      try {
-        await updateDoc(userChatsRef, {
-          chats: updatedUserChats,
-        });
-      } catch (err) {
-        console.log(err);
-      }
-    } else {
-      const groupChatsRef = doc(db, "groupchats", chat.chatId);
-      const groupChatSnapshot = await getDoc(groupChatsRef);
-      const groupChatData = groupChatSnapshot.data();
-
-      var maxIndex = -1;
-
-      if (Array.isArray(groupChatData.chats) && groupChatData.chats.length > 0) {
-        maxIndex = groupChatData.chats.reduce((maxIndex, currentValue, currentIndex) => {
-          return currentIndex > maxIndex ? currentIndex : maxIndex;
-        }, 0);
-      } else {
-        return;
-      }
-
-      const chatIndex = groupChatData.chats[maxIndex];
-      const hasUser = chatIndex.isSeenGroup.findIndex(
-        (item) => item === currentUser.id
+      const chatIndex = updatedUserChats.findIndex(
+        (item) => item.chatId === chat.chatId
       );
 
-      if (hasUser < 0) {
-        chatIndex.isSeenGroup.push(currentUser.id);
+      if (!chat.groupname) {
+        updatedUserChats[chatIndex].isSeen = true;
+        const userChatsRef = doc(db, "userchats", currentUser?.id);
 
-        await updateDoc(doc(db, "groupchats", chat.chatId), {
-          chats: arrayUnion({
-            chatId: chatIndex.chatId,
-            isSeenGroup: chatIndex.isSeenGroup,
-            lastMessage: chatIndex.lastMessage,
-            receiverId: chatIndex.receiverId,
-            isDeleted: false,
-            updatedAt: Date.now(),
-          })
-        }, { merge: true });
-
-        return;
-      } else {
-        return;
+        try {
+          await updateDoc(userChatsRef, {
+            chats: updatedUserChats,
+          });
+        } catch (err) {
+          console.log(err);
+        }
       }
     }
   };
@@ -196,62 +213,63 @@ const ChatList = () => {
   };
 
   const filteredCombinedList = !input
-  ? combinedList
-    .filter((item) => {
-      if (item.type === 'group') {
-        const isUserInGroup = item.usersGroup?.includes(currentUser?.id);
-        const isAdmin = item.admin === currentUser?.id;
-        const hasChat = item.hasChat;
+    ? combinedList
+      .filter((item) => {
+        if (item.type === 'group') {
+          const isUserInGroup = item.usersGroup?.includes(currentUser?.id);
+          const isAdmin = item.admin === currentUser?.id;
+          const hasChat = item.hasChat;
 
-        return (isUserInGroup || isAdmin) && hasChat;
-      }
-      return true;
-    })
-    .map((item) => {
-      if (item.type === 'group') {
-        const groups = item.groupchats || {};
-        const chats = groups.map(x => x.chats) || [];
+          return (isUserInGroup || isAdmin) && hasChat;
+        }
+        return true;
+      })
+      .map((item) => {
+        if (item.type === 'group') {
+          const groups = item.groupchats || [];
+          const chats = groups.map(x => x.chats).flat(); // Usar flat() para garantir que não haja arrays aninhados
 
-        let isSeen = false;
-        let lastMessage = "";
-        let unreadMessagesCount = 0;
+          let isSeen = false;
+          let lastMessage = "";
+          let unreadMessagesCount = 0;
 
-        if (chats.length > 0) {
-          for (const chat of chats) {
-            const isUserSeen = chat.isSeenGroup?.includes(currentUser?.id);
-            if (!isUserSeen) {
-              unreadMessagesCount++;
+          if (chats.length > 0) {
+            for (const chat of chats) {
+              const isUserSeen = chat.isSeenGroup?.includes(currentUser?.id);
+
+              if (!isUserSeen) {
+                unreadMessagesCount++;
+              }
+              if (chat.isDeleted !== true) {
+                lastMessage = chat.lastMessage;
+              }
             }
-            if (chat.length > 0 && chat[chat.length - 1].isDeleted !== true) {
-              lastMessage = chat[chat.length - 1].lastMessage;
-            }
+            isSeen = unreadMessagesCount === 0;
           }
-          isSeen = unreadMessagesCount === 0;
+
+          return {
+            ...item,
+            isSeen,
+            lastMessage,
+            unreadMessagesCount,
+            updatedAt: chats.length > 0 ? chats[chats.length - 1]?.updatedAt : item.updatedAt || 0, // Verificação correta
+          };
         }
 
-        return {
-          ...item,
-          isSeen,
-          lastMessage,
-          unreadMessagesCount,
-          updatedAt: chats.length > 0 ? chats[chats.length - 1]?.updatedAt : item.updatedAt || 0, // Verificação aqui
-        };
-      }
-
-      return item;
-    })
-    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)) // Verificação ao comparar
-  : combinedList
-    .filter((item) => {
-      if (item.type === 'chat') {
-        return item?.user?.username?.toLowerCase().includes(input.toLowerCase());
-      } else if (item.type === 'group') {
-        const isMemberOrAdmin = item.usersGroup?.includes(currentUser?.id) || item.admin === currentUser?.id;
-        return isMemberOrAdmin && item.groupname?.toLowerCase().includes(input.toLowerCase());
-      }
-      return false;
-    })
-    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)); // Verificação ao comparar
+        return item;
+      })
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)) // Ordenação das mais novas para as mais antigas
+    : combinedList
+      .filter((item) => {
+        if (item.type === 'chat') {
+          return item?.user?.username?.toLowerCase().includes(input.toLowerCase());
+        } else if (item.type === 'group') {
+          const isMemberOrAdmin = item.usersGroup?.includes(currentUser?.id) || item.admin === currentUser?.id;
+          return isMemberOrAdmin && item.groupname?.toLowerCase().includes(input.toLowerCase());
+        }
+        return false;
+      })
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)); // Ordenação correta aqui também
 
 
   return (
@@ -278,7 +296,15 @@ const ChatList = () => {
           key={item.id || item.chatId}
           onClick={() => handleSelect(item)}
           style={{
-            backgroundColor: item?.isSeen ? "transparent" : "#5183fe",
+            backgroundColor: item.type === 'group'
+              ? item.groupchats?.some(groupChat =>
+                groupChat.chats?.slice(-1)[0]?.isSeenGroup?.includes(currentUser?.id) === false
+              )
+                ? "#5183fe"
+                : "transparent"
+              : item.isSeen
+                ? "transparent"
+                : "#5183fe"
           }}
         >
           <img
