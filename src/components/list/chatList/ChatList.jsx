@@ -230,7 +230,7 @@ const ChatList = () => {
           const chats = groups.map(x => x.chats).flat(); // Usar flat() para garantir que não haja arrays aninhados
 
           let isSeen = false;
-          let lastMessage = "";
+          let lastMessage = chats[chats.length -1];
           let unreadMessagesCount = 0;
 
           if (chats.length > 0) {

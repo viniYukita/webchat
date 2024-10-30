@@ -25,9 +25,66 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
     const { currentUser } = useUserStore();
     const { chatId, user } = useChatStore();
     const [isMensagemGrupo, setIsMensagemGrupo] = useState(false);
+    const [isUserActive, setIsUserActive] = useState(true);
+
+    const inactivityTimeoutDuration = 30000;
+    let inactivityTimer = null;
 
     const endRef = useRef(null);
     const isAdmin = currentUser.role === "admin";
+
+    const updateLastActivity = async (status) => {
+        try {
+            if (currentUser && currentUser.id) {
+                const userDocRef = doc(db, "users", currentUser.id); // Referência ao documento do usuário
+                await updateDoc(userDocRef, {
+                    lastActivity: new Date(), // Atualizando o timestamp de última atividade
+                    isOnline: status
+                });
+                setIsUserActive(status);
+            }
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    const startInactivityTime = () => {
+        if (inactivityTimer) clearTimeout(inactivityTimer);
+        inactivityTimer = setTimeout(() => {
+            setIsUserActive(false);
+            updateLastActivity(false);
+        }, inactivityTimeoutDuration);
+    }
+
+    const formatLastActivity = (lastActivityTimestamp) => {
+        const lastActivityDate = new Date(lastActivityTimestamp.seconds * 1000);
+        const currentDate = new Date();
+
+        const isSameDay = lastActivityDate.toDateString() === currentDate.toDateString();
+
+        if (isSameDay) {
+            return lastActivityDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        } else {
+            return lastActivityDate.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+    };
+
+    useEffect(() => {
+        if (user?.id) {
+            const userDocRef = doc(db, "users", user.id);
+            
+            // Escutar as mudanças no status `isOnline` e `lastActivity`
+            const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
+                const userData = snapshot.data();
+                
+                if (userData) {
+                    setIsUserActive(userData.isOnline);
+                }
+            });
+
+            return () => unsubscribe(); // Limpeza do listener ao desmontar o componente
+        }
+    }, [user?.id]);
 
     useEffect(() => {
         endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -37,6 +94,19 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
         const unsub = onSnapshot(doc(db, "chats", chatId), (res) => {
             setChat(res.data());
         });
+
+        const handleUserActivity = () => {
+            if (!isUserActive) {
+                updateLastActivity(true);
+            }
+            startInactivityTime();
+        }
+
+        document.addEventListener('mouseMove', handleUserActivity);
+        document.addEventListener('keydown', handleUserActivity);
+        document.addEventListener('scroll', handleUserActivity);
+
+        startInactivityTime();
 
         const unSubGroups = onSnapshot(
             collection(db, "groups"),
@@ -59,6 +129,10 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
         );
 
         return () => {
+            document.removeEventListener('mousemove', handleUserActivity);
+            document.removeEventListener('keydown', handleUserActivity);
+            document.removeEventListener('scroll', handleUserActivity);
+            if (inactivityTimer) clearTimeout(inactivityTimer);
             unsub();
             unSubGroups();
         };
@@ -174,17 +248,17 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
             try {
                 const chatRef = doc(db, "chats", chatId);
                 const chatDoc = await getDoc(chatRef);
-    
+
                 if (chatDoc.exists()) {
                     // Pegando o array de mensagens do documento
                     const messages = chatDoc.data().messages.map((msg) =>
                         // Comparando o senderId e createdAt para garantir que seja a mensagem correta
-                        msg.senderId === message.senderId && 
-                        msg.createdAt.toMillis() === message.createdAt.toMillis()
+                        msg.senderId === message.senderId &&
+                            msg.createdAt.toMillis() === message.createdAt.toMillis()
                             ? { ...msg, isDeleted: true } // Atualizando o campo isDeleted
                             : msg
                     );
-    
+
                     // Atualizando o documento no Firestore
                     await updateDoc(chatRef, { messages });
                 }
@@ -238,6 +312,13 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                     <img src={avatarToShow} alt="" />
                     <div className="texts">
                         <span>{nameToShow}</span>
+                        {isUserActive
+                            ? <p>online</p>
+                            : user?.lastActivity
+                                ? <p>Visto por último: {formatLastActivity(user.lastActivity)}</p>
+                                : null
+                        }
+
                     </div>
                 </div>
                 <div className="icons">
@@ -256,7 +337,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                             <div className="message">
                                 <div className="texts">
                                     <p className="message-content">
-                                        
+
                                         <span className="sender-name">{message?.senderName}</span>
                                         {message.file && (
                                             <a href={message.file} target="_blank" rel="noopener noreferrer">
