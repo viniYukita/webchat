@@ -72,11 +72,11 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
     useEffect(() => {
         if (user?.id) {
             const userDocRef = doc(db, "users", user.id);
-            
+
             // Escutar as mudanças no status `isOnline` e `lastActivity`
             const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
                 const userData = snapshot.data();
-                
+
                 if (userData) {
                     setIsUserActive(userData.isOnline);
                 }
@@ -312,13 +312,11 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                     <img src={avatarToShow} alt="" />
                     <div className="texts">
                         <span>{nameToShow}</span>
-                        {isUserActive
-                            ? <p>online</p>
-                            : user?.lastActivity
-                                ? <p>Visto por último: {formatLastActivity(user.lastActivity)}</p>
-                                : null
-                        }
-
+                        {isUserActive ? (
+                            <p>online</p>
+                        ) : user?.lastActivity ? (
+                            <p>Visto por último: <span>{formatLastActivity(user.lastActivity)}</span></p>
+                        ) : null}
                     </div>
                 </div>
                 <div className="icons">
@@ -337,18 +335,14 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                             <div className="message">
                                 <div className="texts">
                                     <p className="message-content">
-
-                                        <span className="sender-name">{message?.senderName}</span>
+                                        <span className="sender-name">{message?.senderName}</span> {/* <p> trocado por <span> */}
                                         {message.file && (
                                             <a href={message.file} target="_blank" rel="noopener noreferrer">
                                                 Abrir arquivo
                                             </a>
                                         )}
                                         {message.text}
-
-                                        <p className="message-timestamp">
-                                            {formatDateTime(message.createdAt)}
-                                        </p>
+                                        <span className="message-timestamp">{formatDateTime(message.createdAt)}</span> {/* <p> trocado por <span> */}
                                     </p>
 
                                     {message.senderId === currentUser.id && isAdmin && (
