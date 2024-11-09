@@ -8,6 +8,11 @@ import { useUserStore } from "../../lib/userStore";
 import upload from "../../lib/upload";
 import Detail from "../detail/Detail";
 import { AiOutlineDownCircle } from "react-icons/ai";
+import {
+    markMessagesAsSeen,
+    formatDateTime,
+    formatLastActivity
+} from "../../services/chatFirebaseService";
 
 const Chat = ({ isDetailVisible, onToggleDetail }) => {
     const [chat, setChat] = useState();
@@ -25,7 +30,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
     const { currentUser } = useUserStore();
     const { chatId, user } = useChatStore();
     const [isMensagemGrupo, setIsMensagemGrupo] = useState(false);
-    const [isUserActive, setIsUserActive] = useState(true);
+    const [isUserActive, setIsUserActive] = useState(false);
 
     const inactivityTimeoutDuration = 30000;
     let inactivityTimer = null;
@@ -36,55 +41,42 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
     const updateLastActivity = async (status) => {
         try {
             if (currentUser && currentUser.id) {
-                const userDocRef = doc(db, "users", currentUser.id); // Referência ao documento do usuário
+                const userDocRef = doc(db, "users", currentUser.id);
+                console.log(user.id + " " + user.isOnline );
                 await updateDoc(userDocRef, {
-                    lastActivity: new Date(), // Atualizando o timestamp de última atividade
-                    isOnline: status
+                    lastActivity: new Date(),
+                    isOnline: status,
                 });
-                setIsUserActive(status);
             }
-        } catch (e) {
-            console.log(e);
+        } catch (error) {
+            console.log("Erro ao atualizar o status:", error);
         }
-    }
+    };
 
     const startInactivityTime = () => {
         if (inactivityTimer) clearTimeout(inactivityTimer);
         inactivityTimer = setTimeout(() => {
-            setIsUserActive(false);
             updateLastActivity(false);
         }, inactivityTimeoutDuration);
-    }
+    };
 
-    const formatLastActivity = (lastActivityTimestamp) => {
-        const lastActivityDate = new Date(lastActivityTimestamp.seconds * 1000);
-        const currentDate = new Date();
-
-        const isSameDay = lastActivityDate.toDateString() === currentDate.toDateString();
-
-        if (isSameDay) {
-            return lastActivityDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        } else {
-            return lastActivityDate.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-        }
+    const handleUserActivity = () => {
+        updateLastActivity(true);
+        startInactivityTime();
     };
 
     useEffect(() => {
         if (user?.id) {
             const userDocRef = doc(db, "users", user.id);
-
-            // Escutar as mudanças no status `isOnline` e `lastActivity`
             const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
                 const userData = snapshot.data();
-
                 if (userData) {
                     setIsUserActive(userData.isOnline);
                 }
             });
-
-            return () => unsubscribe(); // Limpeza do listener ao desmontar o componente
+            return () => unsubscribe();
         }
-    }, [user?.id]);
+    }, [user.id]);
 
     useEffect(() => {
         endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -94,19 +86,6 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
         const unsub = onSnapshot(doc(db, "chats", chatId), (res) => {
             setChat(res.data());
         });
-
-        const handleUserActivity = () => {
-            if (!isUserActive) {
-                updateLastActivity(true);
-            }
-            startInactivityTime();
-        }
-
-        document.addEventListener('mouseMove', handleUserActivity);
-        document.addEventListener('keydown', handleUserActivity);
-        document.addEventListener('scroll', handleUserActivity);
-
-        startInactivityTime();
 
         const unSubGroups = onSnapshot(
             collection(db, "groups"),
@@ -129,14 +108,23 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
         );
 
         return () => {
-            document.removeEventListener('mousemove', handleUserActivity);
-            document.removeEventListener('keydown', handleUserActivity);
-            document.removeEventListener('scroll', handleUserActivity);
-            if (inactivityTimer) clearTimeout(inactivityTimer);
             unsub();
             unSubGroups();
         };
     }, [chatId]);
+
+    useEffect(() => {
+        document.addEventListener('mousemove', handleUserActivity);
+        document.addEventListener('keydown', handleUserActivity);
+        document.addEventListener('scroll', handleUserActivity);
+
+        return () => {
+            document.removeEventListener('mousemove', handleUserActivity);
+            document.removeEventListener('keydown', handleUserActivity);
+            document.removeEventListener('scroll', handleUserActivity);
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+        };
+    }, []);
 
     const handleEmoji = e => {
         setText(prev => prev + e.emoji);
@@ -151,6 +139,12 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
             });
         }
     };
+
+    useEffect(() => {
+        if (chatId && user?.id) {
+            markMessagesAsSeen(chatId, currentUser);
+        }
+    }, [chatId, user?.id]);
 
     const handleSend = async () => {
         if (text === "" && !file.file) return;
@@ -179,6 +173,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                 senderName: currentUser.username,
                 isDeleted: false,
                 text,
+                isSeen: false,
                 createdAt: new Date(),
                 ...(fileUrl && { file: fileUrl }),
             };
@@ -205,7 +200,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                 userIDs.forEach(async (id) => {
                     const userChatsRef = doc(db, "userchats", id);
                     const userChatsSnapshot = await getDoc(userChatsRef);
-                    if (userChatsSnapshot.exists) {
+                    if (userChatsSnapshot.exists()) {
                         const userChatsData = userChatsSnapshot.data();
                         const chatIndex = userChatsData.chats.findIndex(c => c.chatId === chatId);
 
@@ -250,16 +245,13 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                 const chatDoc = await getDoc(chatRef);
 
                 if (chatDoc.exists()) {
-                    // Pegando o array de mensagens do documento
                     const messages = chatDoc.data().messages.map((msg) =>
-                        // Comparando o senderId e createdAt para garantir que seja a mensagem correta
                         msg.senderId === message.senderId &&
                             msg.createdAt.toMillis() === message.createdAt.toMillis()
-                            ? { ...msg, isDeleted: true } // Atualizando o campo isDeleted
+                            ? { ...msg, isDeleted: true }
                             : msg
                     );
 
-                    // Atualizando o documento no Firestore
                     await updateDoc(chatRef, { messages });
                 }
             } catch (error) {
@@ -267,33 +259,6 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
             }
         }
     };
-
-    const formatDateTime = (timestamp) => {
-        // Extrai segundos e nanosegundos do objeto _Timestamp
-        const seconds = timestamp.seconds;
-        const nanoseconds = timestamp.nanoseconds;
-
-        // Converte segundos e nanosegundos para milissegundos
-        const milliseconds = (seconds * 1000) + (nanoseconds / 1e6);
-
-        // Cria um objeto Date a partir dos milissegundos
-        const date = new Date(milliseconds);
-
-        // Verifica se a data é inválida
-        if (isNaN(date.getTime())) {
-            return 'Data inválida';
-        }
-
-        // Formata a data no formato desejado
-        return date.toLocaleString('pt-BR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-        });
-    };
-
 
     const toggleDropdown = (messageId) => {
         setDropdownOpen(prev => ({
@@ -312,7 +277,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                     <img src={avatarToShow} alt="" />
                     <div className="texts">
                         <span>{nameToShow}</span>
-                        {isUserActive ? (
+                        {isUserActive && !groupname ? (
                             <p>online</p>
                         ) : user?.lastActivity ? (
                             <p>Visto por último: <span>{formatLastActivity(user.lastActivity)}</span></p>
@@ -342,7 +307,6 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                                             </a>
                                         )}
                                         {message.text}
-                                        <span className="message-timestamp">{formatDateTime(message.createdAt)}</span> {/* <p> trocado por <span> */}
                                     </p>
 
                                     {message.senderId === currentUser.id && isAdmin && (
@@ -362,6 +326,13 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                                             )}
                                         </div>
                                     )}
+
+                                    <div>
+                                        <span className="message-timestamp">{formatDateTime(message.createdAt)}</span> {/* <p> trocado por <span> */}
+                                        {message.isSeen && message.senderId === currentUser?.id && (
+                                            <span className="message-status">Lida</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>

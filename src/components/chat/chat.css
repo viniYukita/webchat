@@ -116,6 +116,13 @@
                         flex-direction: row;
                         font-size: 10px;
                         color: #9b9b9b;
+                        
+                    }
+
+                    .message-status {
+                        font-size: 11px;
+                        display: flexbox;
+                        float: right;
                     }
                 }
 
@@ -136,6 +143,7 @@
                 border-radius: 10px;
                 position: relative;
                 margin-right: 10px;
+                height: 3rem;
             }
 
             span {
