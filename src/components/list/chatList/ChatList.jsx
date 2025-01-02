@@ -21,7 +21,8 @@ const ChatList = () => {
   const [groups, setGroups] = useState([]);
   const [groupchats, setGroupChats] = useState([]);
 
-  const [unreadCount, setUnreadCount] = useState(0); // Estado para contar mensagens não lidas
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isLoading, setIsLoading] = useState([true]);
 
   const playNotificationSound = () => {
     const audio = new Audio(notificationSound);
@@ -79,35 +80,39 @@ const ChatList = () => {
       setGroups(groupsData);
     });
 
-    const unnSubGroupChats = onSnapshot(collection(db, "groupchats"), async (snapshot) => {
-      const groupChatsData = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter(groupChat => groups.some(group => group.id === groupChat.id)) // Filtra os groupchats dos grupos que o usuário participa
-        .sort((a, b) => a.updatedAt - b.updatedAt); // Ordena os grupos pela data de atualização
-    
-      // Itera sobre cada grupo para verificar a última mensagem
-      groupChatsData.forEach((groupChat) => {
-        if (groupChat.chats && groupChat.chats.length > 0) {
-          const lastMessage = groupChat.chats[groupChat.chats.length - 1];
-    
-          if (lastMessage.senderId !== currentUser?.id && !lastMessage.isSeenGroup?.includes(currentUser?.id)) {
-            playNotificationSound();
-          }
-        }
-      });
-    
-      setGroupChats(groupChatsData); // Atualiza o estado com os groupchats
-    });
+    onSnapshot(
+      collection(db, "groupchats"),
+      async (snapshot) => {
+        console.log("Raw groupchats snapshot:", snapshot.docs.map(doc => doc.data()));
+      }
+    );
     
     document.addEventListener("keydown", handleEscapeKey);
 
     return () => {
       unSub();
       unSubGroups();
-      unnSubGroupChats();
       document.removeEventListener("keydown", handleEscapeKey);
     };
   }, [currentUser?.id]);
+
+  useEffect(() => {
+    if (groups.length > 0) {
+      setIsLoading(true); // Ativa o loading apenas durante a sincronização
+  
+      const unSubGroupChats = onSnapshot(collection(db, "groupchats"), (snapshot) => {
+        const groupChatsData = snapshot.docs
+          .map((doc) => ({ id: doc.id, ...doc.data() }))
+          .filter((groupChat) => groups.some((group) => group.id === groupChat.id))
+          .sort((a, b) => b.updatedAt - a.updatedAt);
+  
+        setGroupChats((prev) => [...prev, ...groupChatsData]); // Incremental
+        setIsLoading(false); // Desativa o loading
+      });
+  
+      return () => unSubGroupChats();
+    }
+  }, [groups]);
 
   // Atualize o título da aba baseado nas mensagens não lidas
   useEffect(() => {
@@ -120,16 +125,13 @@ const ChatList = () => {
 
   const handleSelect = async (chat) => {
     if (chat.type === "group") {
-      // Verifica se o grupo já possui um chatId associado
       if (!chat.chatId) {
         const chatId = chat.id;
         chat.chatId = chatId;
       }
 
-      // Altera o chat ativo no estado global
       changeChat(chat.chatId, currentUser?.id);
 
-      // Obtém as mensagens do grupo
       const groupChatsRef = doc(db, "groupchats", chat.chatId);
       const groupChatSnapshot = await getDoc(groupChatsRef);
       const groupChatData = groupChatSnapshot.data();
@@ -138,7 +140,6 @@ const ChatList = () => {
 
       const { chats: groupMessages } = groupChatData;
 
-      // Atualiza o campo isSeenGroup nas mensagens que ainda não foram vistas pelo usuário
       const messagesToUpdate = groupMessages.filter(
         (message) => !message.isSeenGroup?.includes(currentUser?.id)
       );
@@ -189,11 +190,13 @@ const ChatList = () => {
     ...chats.map(chat => ({
       ...chat,
       type: 'chat',
+      lastMessage: chat.lastMessage
     })),
     ...groups.map(group => ({
       ...group,
       groupchats: groupchats.filter(x => x.id === group.id),
       type: 'group',
+      lastMessage: group.lastMessage
     })),
   ];
 
@@ -290,56 +293,60 @@ const ChatList = () => {
           onClick={() => setAddMode((prev) => !prev)}
         />
       </div>
-      {filteredCombinedList.map((item) => (
-        <div
-          className="item"
-          key={item.id || item.chatId}
-          onClick={() => handleSelect(item)}
-          style={{
-            backgroundColor: item.type === 'group'
-              ? item.groupchats?.some(groupChat =>
-                groupChat.chats?.slice(-1)[0]?.isSeenGroup?.includes(currentUser?.id) === false
-              )
-                ? "#5183fe"
-                : "transparent"
-              : item.isSeen
-                ? "transparent"
-                : "#5183fe"
-          }}
-        >
-          <img
-            src={
-              item.type === 'chat'
-                ? (item?.user?.avatar ? item.user.avatar : "./avatar.png")
-                : item.avatar
-            }
-            alt=""
-          />
-          <div className="texts">
-            <span>
-              {item.type === 'chat' ? item?.user?.username : item?.groupname}
-            </span>
-            <p>
-              {item.lastMessage}
-            </p>
+      {isLoading ? (
+        <div className="loading"> loading... </div>
+      ): (
+        filteredCombinedList.map((item) => (
+          <div
+            className="item"
+            key={item.id || item.chatId}
+            onClick={() => handleSelect(item)}
+            style={{
+              backgroundColor: item.type === 'group'
+                ? item.groupchats?.some(groupChat =>
+                  groupChat.chats?.slice(-1)[0]?.isSeenGroup?.includes(currentUser?.id) === false
+                )
+                  ? "#5183fe"
+                  : "transparent"
+                : item.isSeen
+                  ? "transparent"
+                  : "#5183fe"
+            }}
+          >
+            <img
+              src={
+                item.type === 'chat'
+                  ? (item?.user?.avatar ? item.user.avatar : "./avatar.png")
+                  : item.avatar
+              }
+              alt=""
+            />
+            <div className="texts">
+              <span>
+                {item.type === 'chat' ? item?.user?.username : item?.groupname}
+              </span>
+              <p>
+                {item.lastMessage}
+              </p>
+            </div>
+            {item.type === 'group' && item.admin === currentUser.id && (
+              <>
+                <AiOutlineDownCircle
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDropdownToggle(item.id);
+                  }}
+                />
+                {dropdownOpen === item.id && (
+                  <div className="dropdown-content show" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => handleDeleteGroup(item)}>Apagar Grupo</button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-          {item.type === 'group' && item.admin === currentUser.id && (
-            <>
-              <AiOutlineDownCircle
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDropdownToggle(item.id);
-                }}
-              />
-              {dropdownOpen === item.id && (
-                <div className="dropdown-content show" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => handleDeleteGroup(item)}>Apagar Grupo</button>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      ))}
+        ))
+      )};
 
       {addMode && <AddUser closeModal={() => setAddMode(false)} />}
     </div>

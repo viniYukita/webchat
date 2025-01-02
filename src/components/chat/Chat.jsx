@@ -14,7 +14,7 @@ import {
     formatLastActivity
 } from "../../services/chatFirebaseService";
 
-const Chat = ({ isDetailVisible, onToggleDetail }) => {
+const Chat = ({ onToggleDetail }) => {
     const [chat, setChat] = useState();
     const [open, setOpen] = useState(false);
     const [text, setText] = useState("");
@@ -38,51 +38,30 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
     const endRef = useRef(null);
     const isAdmin = currentUser.role === "admin";
 
-    const updateLastActivity = async (status) => {
-        try {
-            if (currentUser && currentUser.id) {
-                const userDocRef = doc(db, "users", currentUser.id);
-                console.log(user.id + " " + user.isOnline );
-                await updateDoc(userDocRef, {
-                    lastActivity: new Date(),
-                    isOnline: status,
-                });
-            }
-        } catch (error) {
-            console.log("Erro ao atualizar o status:", error);
-        }
-    };
-
-    const startInactivityTime = () => {
-        if (inactivityTimer) clearTimeout(inactivityTimer);
-        inactivityTimer = setTimeout(() => {
-            updateLastActivity(false);
-        }, inactivityTimeoutDuration);
-    };
-
-    const handleUserActivity = () => {
-        updateLastActivity(true);
-        startInactivityTime();
-    };
 
     useEffect(() => {
+        if (!chatId) return null;
+
         if (user?.id) {
             const userDocRef = doc(db, "users", user.id);
             const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
-                const userData = snapshot.data();
-                if (userData) {
-                    setIsUserActive(userData.isOnline);
-                }
+                // const userData = snapshot.data();
+                // if (userData) {
+                //     setIsUserActive(userData.isOnline);
+                // }
             });
             return () => unsubscribe();
         }
-    }, [user.id]);
+    }, [user?.id]);
 
     useEffect(() => {
+        if (!chatId) return null;
         endRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [chat]);
 
     useEffect(() => {
+        if (!chatId) return;
+
         const unsub = onSnapshot(doc(db, "chats", chatId), (res) => {
             setChat(res.data());
         });
@@ -113,18 +92,18 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
         };
     }, [chatId]);
 
-    useEffect(() => {
-        document.addEventListener('mousemove', handleUserActivity);
-        document.addEventListener('keydown', handleUserActivity);
-        document.addEventListener('scroll', handleUserActivity);
+    // useEffect(() => {
+    //     document.addEventListener('mousemove', handleUserActivity);
+    //     document.addEventListener('keydown', handleUserActivity);
+    //     document.addEventListener('scroll', handleUserActivity);
 
-        return () => {
-            document.removeEventListener('mousemove', handleUserActivity);
-            document.removeEventListener('keydown', handleUserActivity);
-            document.removeEventListener('scroll', handleUserActivity);
-            if (inactivityTimer) clearTimeout(inactivityTimer);
-        };
-    }, []);
+    //     return () => {
+    //         document.removeEventListener('mousemove', handleUserActivity);
+    //         document.removeEventListener('keydown', handleUserActivity);
+    //         document.removeEventListener('scroll', handleUserActivity);
+    //         if (inactivityTimer) clearTimeout(inactivityTimer);
+    //     };
+    // }, []);
 
     const handleEmoji = e => {
         setText(prev => prev + e.emoji);
@@ -137,10 +116,14 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                 file: e.target.files[0],
                 url: URL.createObjectURL(e.target.files[0])
             });
+            if (file) {
+                handleSend();
+            }
         }
     };
 
     useEffect(() => {
+        if (!chatId) return null;
         if (chatId && user?.id) {
             markMessagesAsSeen(chatId, currentUser);
         }
@@ -150,6 +133,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
         if (text === "" && !file.file) return;
 
         let fileUrl = null;
+        var isImage = file.file && file.file.type.startsWith("image/");
 
         try {
             if (file.file) {
@@ -175,7 +159,7 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                 text,
                 isSeen: false,
                 createdAt: new Date(),
-                ...(fileUrl && { file: fileUrl }),
+                ...(fileUrl && { file: fileUrl, isImage: isImage }),
             };
 
             await updateDoc(chatRef, {
@@ -201,8 +185,8 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
                     const userChatsRef = doc(db, "userchats", id);
                     const userChatsSnapshot = await getDoc(userChatsRef);
                     if (userChatsSnapshot.exists()) {
-                        const userChatsData = userChatsSnapshot.data();
-                        const chatIndex = userChatsData.chats.findIndex(c => c.chatId === chatId);
+                        const userChatsData = userChatsSnapshot?.data();
+                        const chatIndex = userChatsData?.chats?.findIndex(c => c?.chatId === chatId);
 
                         if (chatIndex !== -1) {
                             userChatsData.chats[chatIndex].lastMessage = text;
@@ -267,99 +251,121 @@ const Chat = ({ isDetailVisible, onToggleDetail }) => {
         }));
     };
 
-    const avatarToShow = groupname ? (avatar || "./avatar.png") : (user.avatar || "./avatar.png");
-    const nameToShow = groupname ? groupname : user.username;
+    const avatarToShow = groupname ? (avatar || "./avatar.png") : (user?.avatar || "./avatar.png");
+    const nameToShow = groupname ? groupname : user?.username;
 
     return (
         <div className="chat">
-            <div className="top">
-                <div className="user" onClick={handleDetail}>
-                    <img src={avatarToShow} alt="" />
-                    <div className="texts">
-                        <span>{nameToShow}</span>
-                        {isUserActive && !groupname ? (
+            {!chatId ? (
+                <div className="no-chat-selected">
+                    <h2>Bem-vindo ao Chat</h2>
+                </div>
+            ) : (
+                <>
+                    <div className="top">
+                        <div className="user" onClick={handleDetail}>
+                            <img src={avatarToShow} alt="" />
+                            <div className="texts">
+                                <span>{nameToShow}</span>
+                                {/* {isUserActive && !groupname ? (
                             <p>online</p>
                         ) : user?.lastActivity ? (
                             <p>Visto por último: <span>{formatLastActivity(user.lastActivity)}</span></p>
-                        ) : null}
+                        ) : null} */}
+                            </div>
+                        </div>
+                        {/* <div className="icons">
+                            <img src="./phone.png" alt="" />
+                            <img src="./video.png" alt="" />
+                        </div> */}
                     </div>
-                </div>
-                <div className="icons">
-                    <img src="./phone.png" alt="" />
-                    <img src="./video.png" alt="" />
-                </div>
-            </div>
-            <div className="center">
-                {chat?.messages
-                    ?.filter(message => message.isDeleted !== true)
-                    .map((message) => (
-                        <div
-                            className={message.senderId === currentUser?.id ? "message own" : "message"}
-                            key={message?.createdAt}
-                        >
-                            <div className="message">
-                                <div className="texts">
-                                    <p className="message-content">
-                                        <span className="sender-name">{message?.senderName}</span> {/* <p> trocado por <span> */}
-                                        {message.file && (
-                                            <a href={message.file} target="_blank" rel="noopener noreferrer">
-                                                Abrir arquivo
-                                            </a>
-                                        )}
-                                        {message.text}
-                                    </p>
+                    <div className="center">
+                        {chat?.messages
+                            ?.filter(message => message.isDeleted !== true)
+                            .map((message) => (
+                                <div
+                                    className={message.senderId === currentUser?.id ? "message own" : "message"}
+                                    key={message?.createdAt}
+                                >
+                                    <div className="message">
+                                        <div className="texts">
+                                        <span className="sender-name">{message?.senderName}</span>
+                                            <p className="message-content">
+                                                {message.file && message.isImage && (
+                                                    <img
+                                                        src={message.file}
+                                                        alt="Imagem enviada"
+                                                        className="chat-image"
+                                                        style={{ maxWidth: "100%", borderRadius: "8px" }}
+                                                    />
+                                                )}
+                                                {message.file && !message.isImage && (
+                                                    <a href={message.file} target="_blank" rel="noopener noreferrer">
+                                                        Abrir arquivo
+                                                    </a>
+                                                )}
 
-                                    {message.senderId === currentUser.id && isAdmin && (
-                                        <div className="dropdown">
-                                            <button
-                                                onClick={() => toggleDropdown(message.createdAt)}
-                                                className="dropdown-button"
-                                            >
-                                                <AiOutlineDownCircle />
-                                            </button>
-                                            {dropdownOpen[message.createdAt] && (
-                                                <div className="dropdown-content show">
-                                                    <button onClick={() => handleDeleteMessage(message)}>
-                                                        Apagar mensagem
+                                                {/* {message.senderId !== currentUser?.id && (
+                                                    <div className="avatarChat">
+                                                        <img src={avatarToShow} alt="" />
+                                                    </div>
+                                                )} */}
+
+                                                <div className="text-msg">
+                                                    {message.text}
+                                                    <span className="message-timestamp">{formatDateTime(message.createdAt)}</span>
+                                                    {message.isSeen && message.senderId === currentUser?.id && (
+                                                        <span className="message-status">Lida</span>
+                                                    )}
+                                                </div>                                                
+                                            </p>
+
+                                            {message.senderId === currentUser.id && isAdmin && (
+                                                <div className="dropdown">
+                                                    <button
+                                                        onClick={() => toggleDropdown(message.createdAt)}
+                                                        className="dropdown-button"
+                                                    >
+                                                        <AiOutlineDownCircle />
                                                     </button>
+                                                    {dropdownOpen[message.createdAt] && (
+                                                        <div className="dropdown-content show">
+                                                            <button onClick={() => handleDeleteMessage(message)}>
+                                                                Apagar mensagem
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
-                                    )}
-
-                                    <div>
-                                        <span className="message-timestamp">{formatDateTime(message.createdAt)}</span> {/* <p> trocado por <span> */}
-                                        {message.isSeen && message.senderId === currentUser?.id && (
-                                            <span className="message-status">Lida</span>
-                                        )}
                                     </div>
                                 </div>
+                            ))}
+
+                        <div ref={endRef}></div>
+                    </div>
+
+                    <div className="bottom">
+                        <div className="icons">
+                            <label htmlFor="file">
+                                <img src="./img.png" alt="" />
+                            </label>
+
+                            <input type="file" id="file" style={{ display: "none" }} onChange={handleFile} />
+                            {/* <img src="./camera.png" alt="" />
+                    <img src="./mic.png" alt="" /> */}
+                        </div>
+                        <input type="text" placeholder="Digite uma mensagem" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={handleEnterKey} />
+                        <div className="emoji">
+                            <img src="./emoji.png" alt="" onClick={() => setOpen(prev => !prev)} />
+                            <div className="picker">
+                                <EmojiPicker open={open} onEmojiClick={handleEmoji} />
                             </div>
                         </div>
-                    ))}
-
-                <div ref={endRef}></div>
-            </div>
-
-            <div className="bottom">
-                <div className="icons">
-                    <label htmlFor="file">
-                        <img src="./img.png" alt="" />
-                    </label>
-
-                    <input type="file" id="file" style={{ display: "none" }} onChange={handleFile} />
-                    <img src="./camera.png" alt="" />
-                    <img src="./mic.png" alt="" />
-                </div>
-                <input type="text" placeholder="Digite uma mensagem" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={handleEnterKey} />
-                <div className="emoji">
-                    <img src="./emoji.png" alt="" onClick={() => setOpen(prev => !prev)} />
-                    <div className="picker">
-                        <EmojiPicker open={open} onEmojiClick={handleEmoji} />
+                        <button className="sendBtn" onClick={handleSend} >Enviar</button>
                     </div>
-                </div>
-                <button className="sendBtn" onClick={handleSend} >Enviar</button>
-            </div>
+                </>
+            )}
         </div>
     );
 

@@ -4,7 +4,8 @@
     align-items: center;
     justify-content: space-between;
     overflow: auto;
-    background: #062b40;
+    background: #e2e2e2;
+    color: black;
 }
 
 .cadastro-div img {

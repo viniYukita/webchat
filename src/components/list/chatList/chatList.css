@@ -12,7 +12,7 @@
   
   .chatList .search .searchBar {
     flex: 1;
-    background-color: rgba(17, 25, 40, 0.5);
+    background-color: rgb(177 177 177 / 50%);
     display: flex;
     align-items: center;
     gap: 20px;
@@ -24,7 +24,7 @@
     background-color: transparent;
     border: none;
     outline: none;
-    color: white;
+    color: rgb(0, 0, 0);
     flex: 1;
   }
   
@@ -36,7 +36,7 @@
   .chatList .search .add {
     width: 36px;
     height: 36px;
-    background-color: rgba(17, 25, 40, 0.5);
+    background-color: rgb(177 177 177 / 50%);
     padding: 10px;
     border-radius: 10px;
     cursor: pointer;

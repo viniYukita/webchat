@@ -4,6 +4,7 @@
     display: flex;
     align-items: center;
     gap: 100px;
+    color: black;
     
     .item {
         flex:1;
@@ -19,12 +20,16 @@
             justify-content: center;
             gap: 20px;
 
+            ::placeholder {
+                color: black;
+            }
+
             input {
                 gap: 20px;
                 border: none;
                 outline: none;
                 background-color: rgba(17,25,40,0.6);
-                color: white;
+                color: black;
                 border-radius: 5px;
                 padding: 20px;
                 width: 30rem;
@@ -52,8 +57,8 @@
                 width: 100%;
                 padding: 20px;
                 border: none;
-                color: white;
-                background-color: #1f8ef1;
+                color: black;
+                background-color: #19ad32;
                 border-radius: 5px;
                 cursor: pointer;
                 font-weight: 500;

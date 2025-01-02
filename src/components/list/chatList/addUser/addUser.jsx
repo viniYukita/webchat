@@ -69,22 +69,38 @@ const AddUser = ({ closeModal }) => {
 
   const handleAdd = async () => {
     if (!user) return;
-
+  
     const chatRef = collection(db, "chats");
     const userChatsRef = user?.groupname ? collection(db, "groupchats") : collection(db, "userchats");
-
+  
     try {
       const newChatRef = doc(chatRef);
       const newUserChatRef = doc(userChatsRef, currentUser?.id);
       const newUserIdChatRef = doc(userChatsRef, user?.id);
+      
+      // Verificar se já existe um chat entre os dois usuários
       const userChatDoc = await getDoc(newUserChatRef);
       const userIdChatRefDoc = await getDoc(newUserIdChatRef);
-
+  
+      const userChats = userChatDoc.exists() ? userChatDoc.data().chats : [];
+      const userIdChats = userIdChatRefDoc.exists() ? userIdChatRefDoc.data().chats : [];
+  
+      // Verificar se já existe um chat entre currentUser e o user
+      const chatAlreadyExists = userChats.some(chat => chat.receiverId === user.id);
+      const reverseChatAlreadyExists = userIdChats.some(chat => chat.receiverId === currentUser.id);
+  
+      if (chatAlreadyExists || reverseChatAlreadyExists) {
+        console.log("Chat já existe entre os usuários.");
+        return;
+      }
+  
+      // Criar o novo chat se não existir
       await setDoc(newChatRef, {
         createdAt: serverTimestamp(),
         messages: [],
       });
-
+  
+      // Adicionar chat para o currentUser
       if (userChatDoc.exists()) {
         await updateDoc(newUserChatRef, {
           chats: arrayUnion({
@@ -106,7 +122,8 @@ const AddUser = ({ closeModal }) => {
           ],
         });
       }
-
+  
+      // Adicionar chat para o user
       if (userIdChatRefDoc.exists()) {
         await updateDoc(newUserIdChatRef, {
           chats: arrayUnion({
@@ -128,12 +145,12 @@ const AddUser = ({ closeModal }) => {
           ],
         });
       }
-
+  
       closeModal();
     } catch (err) {
       console.log("Erro ao iniciar a conversa:", err);
     }
-  };
+  };  
 
   return (
     <div className="addUser">
